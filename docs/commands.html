@@ -1,0 +1,1087 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Expense Tracker API Commands</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: sticky section index on the left, commands in one reading column; three-terminal setup diagram as the opener.
+   Same ledger-green family as the front-end; terminal blocks stay dark in both themes. */
+:root {
+  --paper: #f2f5f3; --surface: #ffffff; --ink: #15211b; --muted: #56665e; --line: #d6ded9;
+  --ledger: #1d7350; --ledger-soft: #e3f0e9;
+  --term: #14201a; --term-line: #24342b; --term-ink: #dce8e1; --term-muted: #8fa398; --out: #f7f9f8; --out-ink: #24312a;
+  --get: #2f6fd0; --post: #1e8a5a; --put: #a8671a; --delete: #b8392f;
+  --ok: #1e8a5a; --warn: #a8671a;
+  --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --cond: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0f1512; --surface: #161f1a; --ink: #e2ebe5; --muted: #98a89f; --line: #28352e;
+  --ledger: #4cc08a; --ledger-soft: #1c3428; --term: #0a110d; --term-line: #1f2c25; --out: #111915; --out-ink: #cfdbd4;
+  --get: #6fa5f0; --post: #4cc08a; --put: #e0a443; --delete: #ee7c72; --ok: #4cc08a; --warn: #e0a443; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --paper: #0f1512; --surface: #161f1a; --ink: #e2ebe5; --muted: #98a89f; --line: #28352e;
+  --ledger: #4cc08a; --ledger-soft: #1c3428; --term: #0a110d; --term-line: #1f2c25; --out: #111915; --out-ink: #cfdbd4;
+  --get: #6fa5f0; --post: #4cc08a; --put: #e0a443; --delete: #ee7c72; --ok: #4cc08a; --warn: #e0a443; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font: 15px/1.55 var(--sans); margin: 0; -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 24px; padding-block: 36px 64px; }
+h1, h2, h3 { font-family: var(--cond); font-weight: 600; text-wrap: balance; margin: 0; }
+a { color: inherit; }
+code { font-family: var(--mono); font-size: 0.88em; }
+:focus-visible { outline: 2px solid var(--ledger); outline-offset: 2px; }
+
+/* opener */
+.top h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); letter-spacing: -0.01em; line-height: 1.1; }
+.lede { max-width: 68ch; color: var(--muted); margin: 10px 0 0; }
+.lede strong { color: var(--ink); font-weight: 500; }
+.rig { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 28px 0 10px; }
+.tty { background: var(--term); color: var(--term-ink); border-radius: 8px; border: 1px solid var(--term-line); overflow: hidden; min-width: 0; }
+.tty-bar { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--term-line); color: var(--term-muted); font-size: 0.8rem; }
+.tty-bar i { width: 9px; height: 9px; border-radius: 50%; background: var(--term-line); display: inline-block; }
+.tty-bar b { margin-left: 6px; font-weight: 500; color: var(--term-ink); }
+.tty-body { padding: 12px 14px 14px; font: 0.8rem/1.6 var(--mono); }
+.tty-body .p { color: var(--term-muted); }
+.tty-body p { margin: 8px 0 0; font-family: var(--sans); font-size: 0.82rem; color: var(--term-muted); line-height: 1.45; }
+
+/* layout */
+.cols { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 40px; margin-top: 36px; align-items: start; }
+nav { position: sticky; top: calc(16px + env(safe-area-inset-top, 0px)); }
+.find { width: 100%; font: inherit; color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+.find:focus { border-color: var(--ledger); outline: none; }
+nav ol { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 2px; }
+nav li { display: flex; justify-content: space-between; gap: 8px; font-size: 0.9rem; }
+nav li a { text-decoration: none; padding: 3px 0; }
+nav li a:hover { color: var(--ledger); }
+nav li span { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.8rem; padding-top: 4px; }
+.navnote { font-size: 0.8rem; color: var(--muted); margin: 16px 0 0; }
+
+/* sections */
+main { min-width: 0; }
+.sec { padding-bottom: 12px; }
+.sec + .sec { border-top: 1px solid var(--line); padding-top: 28px; margin-top: 20px; }
+.sec-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; scroll-margin-top: 16px; }
+.sec h2 { font-size: 1.6rem; }
+.route { margin: 0; font-size: 0.95rem; }
+.m { font-family: var(--mono); font-weight: 500; font-size: 0.85rem; }
+.m-GET { color: var(--get); } .m-POST { color: var(--post); } .m-PUT { color: var(--put); } .m-DELETE { color: var(--delete); }
+.intro { color: var(--muted); max-width: 70ch; margin: 6px 0 4px; }
+
+.cmd { margin-top: 22px; scroll-margin-top: 16px; }
+.cmd h3 { font-size: 1.08rem; }
+.cmd h3 a { text-decoration: none; }
+.cmd h3 a:hover { text-decoration: underline; text-decoration-color: var(--ledger); }
+.desc { margin: 2px 0 0; color: var(--muted); max-width: 72ch; font-size: 0.93rem; }
+.term { position: relative; margin-top: 8px; background: var(--term); border-radius: 6px; border: 1px solid var(--term-line); }
+.term pre { margin: 0; padding: 12px 84px 12px 14px; color: var(--term-ink); font: 0.84rem/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.term pre code::before { content: "$ "; color: var(--term-muted); user-select: none; }
+.copy { position: absolute; top: 8px; right: 8px; font: 500 0.8rem var(--sans); color: var(--term-ink); background: transparent;
+  border: 1px solid var(--term-line); border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+.copy:hover { border-color: var(--term-muted); }
+.out { margin-top: 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--out); }
+.out summary { cursor: pointer; padding: 7px 12px; font-size: 0.84rem; color: var(--muted); display: flex; align-items: center; gap: 10px; }
+.out summary::marker { color: var(--muted); }
+.out[open] summary { border-bottom: 1px solid var(--line); }
+.out pre { margin: 0; padding: 10px 14px; overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: 0.8rem/1.55 var(--mono); color: var(--out-ink); max-height: 420px; }
+.lines { margin-left: auto; font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+.st { font: 500 0.78rem var(--mono); }
+.st2 { color: var(--ok); } .st4 { color: var(--warn); }
+.log .out pre, .out pre.keep { white-space: pre; overflow-wrap: normal; }
+.none { color: var(--muted); margin-top: 24px; }
+.foot { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; max-width: 72ch; }
+
+@media (max-width: 900px) {
+  .cols { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  nav { position: static; }
+  nav ol { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  nav li span { display: none; }
+  .rig { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 520px) { .wrap { padding-inline: 16px; } }
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header class="top">
+    <h1>Expense Tracker API commands</h1>
+    <p class="lede">Every terminal command for the API, from starting the server to reading the database.
+    <strong>All 62 outputs marked “Output” were recorded by running the command against the real server</strong>
+    on an empty database on 9 October 2026, so your ids, timestamps and totals will differ.</p>
+
+    <div class="rig" aria-label="The three terminals you will use">
+      <div class="tty"><div class="tty-bar"><i></i><i></i><i></i><b>Terminal 1: the API</b></div>
+        <div class="tty-body"><span class="p">$</span> uvicorn app.main:app --reload
+          <p>Serves http://127.0.0.1:8000 and prints one line per request it receives.</p></div></div>
+      <div class="tty"><div class="tty-bar"><i></i><i></i><i></i><b>Terminal 2: the front-end</b></div>
+        <div class="tty-body"><span class="p">$</span> python3 -m http.server 5500 --directory frontend
+          <p>Serves the web page at http://127.0.0.1:5500. The page calls the API from your browser.</p></div></div>
+      <div class="tty"><div class="tty-bar"><i></i><i></i><i></i><b>Terminal 3: you, with curl</b></div>
+        <div class="tty-body"><span class="p">$</span> curl -s http://127.0.0.1:8000/expenses
+          <p>Sends requests by hand. Everything on this page from “Check the server” on runs here.</p></div></div>
+    </div>
+  </header>
+
+  <div class="cols">
+    <nav aria-label="Sections">
+      <label for="find" class="navnote" style="display:block;margin:0 0 6px">Find a command</label>
+      <input id="find" class="find" type="search" placeholder="delete, csv, 422…" autocomplete="off">
+      <ol><li><a href="#start">Start the API</a><span>9</span></li><li><a href="#check">Check the server</a><span>2</span></li><li><a href="#create">Add expenses</a><span>7</span></li><li><a href="#errors">Validation errors</a><span>11</span></li><li><a href="#list">List and filter</a><span>11</span></li><li><a href="#view">View one expense</a><span>3</span></li><li><a href="#update">Update an expense</a><span>4</span></li><li><a href="#delete">Delete an expense</a><span>3</span></li><li><a href="#summary">Summaries</a><span>8</span></li><li><a href="#headers">Headers, timing and CORS</a><span>8</span></li><li><a href="#database">Look inside the database</a><span>6</span></li><li><a href="#frontend">Front-end and housekeeping</a><span>7</span></li></ol>
+      <p class="navnote">79 commands. Copy buttons copy exactly what is shown, without the $.</p>
+    </nav>
+    <main id="sections">
+      <section class="sec" id="start" data-sec>
+<div class="sec-head"><h2>Start the API</h2></div>
+<p class="intro">Run these once per session in Terminal 1. Leave the server running; every other command talks to it.</p>
+<article class="cmd" id="start-go-to-the-project-folder" data-text="start the api go to the project folder  cd ~/downloads/expense-tracker-api">
+  <h3><a href="#start-go-to-the-project-folder">Go to the project folder</a></h3>
+  
+  <div class="term"><pre><code>cd ~/Downloads/expense-tracker-api</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  
+</article>
+<article class="cmd" id="start-turn-on-the-virtual-environment" data-text="start the api turn on the virtual environment your prompt starts with (.venv) when it is active. source .venv/bin/activate">
+  <h3><a href="#start-turn-on-the-virtual-environment">Turn on the virtual environment</a></h3>
+  <p class="desc">Your prompt starts with (.venv) when it is active.</p>
+  <div class="term"><pre><code>source .venv/bin/activate</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  
+</article>
+<article class="cmd" id="start-install-or-update-the-packages" data-text="start the api install or update the packages  pip install -r requirements.txt">
+  <h3><a href="#start-install-or-update-the-packages">Install or update the packages</a></h3>
+  
+  <div class="term"><pre><code>pip install -r requirements.txt</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  
+</article>
+<article class="cmd" id="start-start-the-api-server" data-text="start the api start the api server --reload restarts the server whenever you save a file. stop it with ctrl+c. uvicorn app.main:app --reload">
+  <h3><a href="#start-start-the-api-server">Start the API server</a></h3>
+  <p class="desc">--reload restarts the server whenever you save a file. Stop it with Ctrl+C.</p>
+  <div class="term"><pre><code>uvicorn app.main:app --reload</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Prints, then keeps running until Ctrl+C<span class="lines">6 lines</span></summary><pre>INFO:     Will watch for changes in these directories: [&#x27;/Users/abhiram/Downloads/expense-tracker-api&#x27;]
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [12345] using WatchFiles
+INFO:     Started server process [12347]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.</pre></details>
+</article>
+<article class="cmd" id="start-load-about-3-months-of-sample-expenses" data-text="start the api load about 3 months of sample expenses optional. adds realistic data so lists and summaries have something to show. python -m scripts.seed">
+  <h3><a href="#start-load-about-3-months-of-sample-expenses">Load about 3 months of sample expenses</a></h3>
+  <p class="desc">Optional. Adds realistic data so lists and summaries have something to show.</p>
+  <div class="term"><pre><code>python -m scripts.seed</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Prints<span class="lines">2 lines</span></summary><pre>Inserted 135 expenses into data/expenses.db
+(the count varies with today&#x27;s date)</pre></details>
+</article>
+<article class="cmd" id="start-run-the-automated-tests" data-text="start the api run the automated tests 14 tests for the data and business layers, 17 for the http endpoints. python -m pytest -v">
+  <h3><a href="#start-run-the-automated-tests">Run the automated tests</a></h3>
+  <p class="desc">14 tests for the data and business layers, 17 for the HTTP endpoints.</p>
+  <div class="term"><pre><code>python -m pytest -v</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Prints<span class="lines">4 lines</span></summary><pre>...
+tests/test_service.py::TestValidation::test_rejects_bad_month PASSED
+
+============================== 31 passed ===============================</pre></details>
+</article>
+<article class="cmd" id="start-start-with-a-brand-new-empty-database" data-text="start the api start with a brand-new empty database expenses_db picks the database file. handy for a clean demo without touching your real data. expenses_db=data/demo.db uvicorn app.main:app --reload">
+  <h3><a href="#start-start-with-a-brand-new-empty-database">Start with a brand-new empty database</a></h3>
+  <p class="desc">EXPENSES_DB picks the database file. Handy for a clean demo without touching your real data.</p>
+  <div class="term"><pre><code>EXPENSES_DB=data/demo.db uvicorn app.main:app --reload</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  
+</article>
+<article class="cmd" id="start-run-on-a-different-port" data-text="start the api run on a different port then use :8001 instead of :8000 in every command below. uvicorn app.main:app --reload --port 8001">
+  <h3><a href="#start-run-on-a-different-port">Run on a different port</a></h3>
+  <p class="desc">Then use :8001 instead of :8000 in every command below.</p>
+  <div class="term"><pre><code>uvicorn app.main:app --reload --port 8001</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  
+</article>
+<article class="cmd" id="start-open-the-interactive-api-docs" data-text="start the api open the interactive api docs fastapi builds this page from the code. you can try every endpoint from the browser. open http://127.0.0.1:8000/docs">
+  <h3><a href="#start-open-the-interactive-api-docs">Open the interactive API docs</a></h3>
+  <p class="desc">FastAPI builds this page from the code. You can try every endpoint from the browser.</p>
+  <div class="term"><pre><code>open http://127.0.0.1:8000/docs</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  
+</article>
+</section><section class="sec" id="check" data-sec>
+<div class="sec-head"><h2>Check the server</h2></div>
+<p class="intro">Open Terminal 2 for everything from here on.</p>
+<article class="cmd" id="check-is-the-server-up" data-text="check the server is the server up?  curl -s http://127.0.0.1:8000/">
+  <h3><a href="#check-is-the-server-up">Is the server up?</a></h3>
+  
+  <div class="term"><pre><code>curl -s http://127.0.0.1:8000/</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">1 line</span></summary><pre>{&quot;message&quot;:&quot;Expense Tracker API. Open /docs for the interactive docs.&quot;}</pre></details>
+</article>
+<article class="cmd" id="check-list-every-route-the-api-exposes" data-text="check the server list every route the api exposes reads the openapi description fastapi generates. curl -s http://127.0.0.1:8000/openapi.json | python3 -c &#x27;import sys, json; [print(m.upper().ljust(7), p) for p, ops in json.load(sys.stdin)[&quot;paths&quot;].items() for m in ops]&#x27;">
+  <h3><a href="#check-list-every-route-the-api-exposes">List every route the API exposes</a></h3>
+  <p class="desc">Reads the OpenAPI description FastAPI generates.</p>
+  <div class="term"><pre><code>curl -s http://127.0.0.1:8000/openapi.json | python3 -c &#x27;import sys, json; [print(m.upper().ljust(7), p) for p, ops in json.load(sys.stdin)[&quot;paths&quot;].items() for m in ops]&#x27;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">6 lines</span></summary><pre>POST    /expenses
+GET     /expenses
+GET     /expenses/summary
+GET     /expenses/{expense_id}
+PUT     /expenses/{expense_id}
+DELETE  /expenses/{expense_id}</pre></details>
+</article>
+</section><section class="sec" id="create" data-sec>
+<div class="sec-head"><h2>Add expenses</h2><p class="route"><span class="m m-POST">POST</span> <code>/expenses</code></p></div>
+<p class="intro">POST sends a JSON body. A successful add returns 201 Created and the stored expense, including its new id.</p>
+<article class="cmd" id="create-add-an-expense" data-text="add expenses add an expense  curl -s -x post http://127.0.0.1:8000/expenses -h &quot;content-type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;groceries&quot;, &quot;amount&quot;: 42.50, &quot;category&quot;: &quot;food&quot;, &quot;spent_on&quot;: &quot;2026-10-05&quot;}&#x27; | python3 -m json.tool">
+  <h3><a href="#create-add-an-expense">Add an expense</a></h3>
+  
+  <div class="term"><pre><code>curl -s -X POST http://127.0.0.1:8000/expenses -H &quot;Content-Type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;Groceries&quot;, &quot;amount&quot;: 42.50, &quot;category&quot;: &quot;food&quot;, &quot;spent_on&quot;: &quot;2026-10-05&quot;}&#x27; | python3 -m json.tool</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">10 lines</span></summary><pre>{
+    &quot;id&quot;: 1,
+    &quot;title&quot;: &quot;Groceries&quot;,
+    &quot;amount&quot;: 42.5,
+    &quot;category&quot;: &quot;food&quot;,
+    &quot;spent_on&quot;: &quot;2026-10-05&quot;,
+    &quot;note&quot;: null,
+    &quot;created_at&quot;: &quot;2026-10-09 11:38:18&quot;,
+    &quot;updated_at&quot;: &quot;2026-10-09 11:38:18&quot;
+}</pre></details>
+</article>
+<article class="cmd" id="create-add-one-with-a-note" data-text="add expenses add one with a note  curl -s -x post http://127.0.0.1:8000/expenses -h &quot;content-type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;metrocard refill&quot;, &quot;amount&quot;: 34, &quot;category&quot;: &quot;transport&quot;, &quot;spent_on&quot;: &quot;2026-09-28&quot;, &quot;note&quot;: &quot;unlimited 7-day&quot;}&#x27; | python3 -m json.tool">
+  <h3><a href="#create-add-one-with-a-note">Add one with a note</a></h3>
+  
+  <div class="term"><pre><code>curl -s -X POST http://127.0.0.1:8000/expenses -H &quot;Content-Type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;MetroCard refill&quot;, &quot;amount&quot;: 34, &quot;category&quot;: &quot;transport&quot;, &quot;spent_on&quot;: &quot;2026-09-28&quot;, &quot;note&quot;: &quot;Unlimited 7-day&quot;}&#x27; | python3 -m json.tool</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">10 lines</span></summary><pre>{
+    &quot;id&quot;: 2,
+    &quot;title&quot;: &quot;MetroCard refill&quot;,
+    &quot;amount&quot;: 34.0,
+    &quot;category&quot;: &quot;transport&quot;,
+    &quot;spent_on&quot;: &quot;2026-09-28&quot;,
+    &quot;note&quot;: &quot;Unlimited 7-day&quot;,
+    &quot;created_at&quot;: &quot;2026-10-09 11:38:18&quot;,
+    &quot;updated_at&quot;: &quot;2026-10-09 11:38:18&quot;
+}</pre></details>
+</article>
+<article class="cmd" id="create-messy-input-gets-cleaned-up" data-text="add expenses messy input gets cleaned up spaces are trimmed, the category is lower-cased, and a blank note becomes null. curl -s -x post http://127.0.0.1:8000/expenses -h &quot;content-type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;  coffee  &quot;, &quot;amount&quot;: 4.75, &quot;category&quot;: &quot;  food &quot;, &quot;spent_on&quot;: &quot;2026-10-07&quot;, &quot;note&quot;: &quot;   &quot;}&#x27; | python3 -m json.tool">
+  <h3><a href="#create-messy-input-gets-cleaned-up">Messy input gets cleaned up</a></h3>
+  <p class="desc">Spaces are trimmed, the category is lower-cased, and a blank note becomes null.</p>
+  <div class="term"><pre><code>curl -s -X POST http://127.0.0.1:8000/expenses -H &quot;Content-Type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;  Coffee  &quot;, &quot;amount&quot;: 4.75, &quot;category&quot;: &quot;  FOOD &quot;, &quot;spent_on&quot;: &quot;2026-10-07&quot;, &quot;note&quot;: &quot;   &quot;}&#x27; | python3 -m json.tool</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">10 lines</span></summary><pre>{
+    &quot;id&quot;: 3,
+    &quot;title&quot;: &quot;Coffee&quot;,
+    &quot;amount&quot;: 4.75,
+    &quot;category&quot;: &quot;food&quot;,
+    &quot;spent_on&quot;: &quot;2026-10-07&quot;,
+    &quot;note&quot;: null,
+    &quot;created_at&quot;: &quot;2026-10-09 11:38:18&quot;,
+    &quot;updated_at&quot;: &quot;2026-10-09 11:38:18&quot;
+}</pre></details>
+</article>
+<article class="cmd" id="create-money-is-stored-exactly" data-text="add expenses money is stored exactly amounts are kept as whole cents, so 19.99 stays 19.99. curl -s -x post http://127.0.0.1:8000/expenses -h &quot;content-type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;notebook&quot;, &quot;amount&quot;: 19.99, &quot;category&quot;: &quot;education&quot;, &quot;spent_on&quot;: &quot;2026-09-15&quot;}&#x27; | python3 -m json.tool">
+  <h3><a href="#create-money-is-stored-exactly">Money is stored exactly</a></h3>
+  <p class="desc">Amounts are kept as whole cents, so 19.99 stays 19.99.</p>
+  <div class="term"><pre><code>curl -s -X POST http://127.0.0.1:8000/expenses -H &quot;Content-Type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;Notebook&quot;, &quot;amount&quot;: 19.99, &quot;category&quot;: &quot;education&quot;, &quot;spent_on&quot;: &quot;2026-09-15&quot;}&#x27; | python3 -m json.tool</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">10 lines</span></summary><pre>{
+    &quot;id&quot;: 4,
+    &quot;title&quot;: &quot;Notebook&quot;,
+    &quot;amount&quot;: 19.99,
+    &quot;category&quot;: &quot;education&quot;,
+    &quot;spent_on&quot;: &quot;2026-09-15&quot;,
+    &quot;note&quot;: null,
+    &quot;created_at&quot;: &quot;2026-10-09 11:38:18&quot;,
+    &quot;updated_at&quot;: &quot;2026-10-09 11:38:18&quot;
+}</pre></details>
+</article>
+<article class="cmd" id="create-add-one-and-save-its-id-for-later-commands" data-text="add expenses add one and save its id for later commands the id lands in the shell variable $id, which the view, update and delete examples use. run this in the same terminal as those. id=$(curl -s -x post http://127.0.0.1:8000/expenses -h &quot;content-type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;concert ticket&quot;, &quot;amount&quot;: 85, &quot;category&quot;: &quot;entertainment&quot;, &quot;spent_on&quot;: &quot;2026-10-08&quot;}&#x27; | python3 -c &#x27;import sys, json; print(json.load(sys.stdin)[&quot;id&quot;])&#x27;) &amp;&amp; echo &quot;new expense id: $id&quot;">
+  <h3><a href="#create-add-one-and-save-its-id-for-later-commands">Add one and save its id for later commands</a></h3>
+  <p class="desc">The id lands in the shell variable $ID, which the view, update and delete examples use. Run this in the same terminal as those.</p>
+  <div class="term"><pre><code>ID=$(curl -s -X POST http://127.0.0.1:8000/expenses -H &quot;Content-Type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;Concert ticket&quot;, &quot;amount&quot;: 85, &quot;category&quot;: &quot;entertainment&quot;, &quot;spent_on&quot;: &quot;2026-10-08&quot;}&#x27; | python3 -c &#x27;import sys, json; print(json.load(sys.stdin)[&quot;id&quot;])&#x27;) &amp;&amp; echo &quot;New expense id: $ID&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">1 line</span></summary><pre>New expense id: 5</pre></details>
+</article>
+<article class="cmd" id="create-add-several-in-a-loop" data-text="add expenses add several in a loop prints just the status code of each request. for day in 01 02 03; do curl -s -o /dev/null -w &quot;%{http_code} &quot; -x post http://127.0.0.1:8000/expenses -h &quot;content-type: application/json&quot; -d &quot;{\&quot;title\&quot;: \&quot;lunch\&quot;, \&quot;amount\&quot;: 12.50, \&quot;category\&quot;: \&quot;food\&quot;, \&quot;spent_on\&quot;: \&quot;2026-10-$day\&quot;}&quot;; done; echo">
+  <h3><a href="#create-add-several-in-a-loop">Add several in a loop</a></h3>
+  <p class="desc">Prints just the status code of each request.</p>
+  <div class="term"><pre><code>for day in 01 02 03; do curl -s -o /dev/null -w &quot;%{http_code} &quot; -X POST http://127.0.0.1:8000/expenses -H &quot;Content-Type: application/json&quot; -d &quot;{\&quot;title\&quot;: \&quot;Lunch\&quot;, \&quot;amount\&quot;: 12.50, \&quot;category\&quot;: \&quot;food\&quot;, \&quot;spent_on\&quot;: \&quot;2026-10-$day\&quot;}&quot;; done; echo</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">1 line</span></summary><pre>201 201 201 </pre></details>
+</article>
+<article class="cmd" id="create-see-the-status-line-and-headers-too" data-text="add expenses see the status line and headers too -i prints the response headers above the body. note 201 created and the x-request-id header. curl -s -i -x post http://127.0.0.1:8000/expenses -h &quot;content-type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;phone bill&quot;, &quot;amount&quot;: 35, &quot;category&quot;: &quot;utilities&quot;, &quot;spent_on&quot;: &quot;2026-09-01&quot;}&#x27;">
+  <h3><a href="#create-see-the-status-line-and-headers-too">See the status line and headers too</a></h3>
+  <p class="desc">-i prints the response headers above the body. Note 201 Created and the X-Request-ID header.</p>
+  <div class="term"><pre><code>curl -s -i -X POST http://127.0.0.1:8000/expenses -H &quot;Content-Type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;Phone bill&quot;, &quot;amount&quot;: 35, &quot;category&quot;: &quot;utilities&quot;, &quot;spent_on&quot;: &quot;2026-09-01&quot;}&#x27;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st2">201 Created</span><span class="lines">9 lines</span></summary><pre>HTTP/1.1 201 Created
+date: Fri, 09 Oct 2026 11:38:18 GMT
+server: uvicorn
+content-length: 172
+content-type: application/json
+x-request-id: b9ee16f4
+x-response-time-ms: 2.6
+
+{&quot;id&quot;:9,&quot;title&quot;:&quot;Phone bill&quot;,&quot;amount&quot;:35.0,&quot;category&quot;:&quot;utilities&quot;,&quot;spent_on&quot;:&quot;2026-09-01&quot;,&quot;note&quot;:null,&quot;created_at&quot;:&quot;2026-10-09 11:38:18&quot;,&quot;updated_at&quot;:&quot;2026-10-09 11:38:18&quot;}</pre></details>
+</article>
+</section><section class="sec" id="errors" data-sec>
+<div class="sec-head"><h2>Validation errors</h2><p class="route"><span class="m m-POST">POST</span> <code>/expenses</code></p></div>
+<p class="intro">Bad input is rejected with 422 Unprocessable Content and nothing is saved. Shape and type problems come back as a list from Pydantic; business-rule problems come back as one sentence.</p>
+<article class="cmd" id="errors-amount-of-zero" data-text="validation errors amount of zero  curl -s -x post http://127.0.0.1:8000/expenses -h &quot;content-type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;free sample&quot;, &quot;amount&quot;: 0, &quot;category&quot;: &quot;food&quot;, &quot;spent_on&quot;: &quot;2026-10-05&quot;}&#x27; -w &quot;\nhttp %{http_code}\n&quot;">
+  <h3><a href="#errors-amount-of-zero">Amount of zero</a></h3>
+  
+  <div class="term"><pre><code>curl -s -X POST http://127.0.0.1:8000/expenses -H &quot;Content-Type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;Free sample&quot;, &quot;amount&quot;: 0, &quot;category&quot;: &quot;food&quot;, &quot;spent_on&quot;: &quot;2026-10-05&quot;}&#x27; -w &quot;\nHTTP %{http_code}\n&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st4">422 Unprocessable Content</span><span class="lines">2 lines</span></summary><pre>{&quot;detail&quot;:[{&quot;type&quot;:&quot;greater_than&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;amount&quot;],&quot;msg&quot;:&quot;Input should be greater than 0&quot;,&quot;input&quot;:0,&quot;ctx&quot;:{&quot;gt&quot;:0}}]}
+HTTP 422</pre></details>
+</article>
+<article class="cmd" id="errors-negative-amount" data-text="validation errors negative amount  curl -s -x post http://127.0.0.1:8000/expenses -h &quot;content-type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;refund&quot;, &quot;amount&quot;: -5, &quot;category&quot;: &quot;food&quot;, &quot;spent_on&quot;: &quot;2026-10-05&quot;}&#x27; -w &quot;\nhttp %{http_code}\n&quot;">
+  <h3><a href="#errors-negative-amount">Negative amount</a></h3>
+  
+  <div class="term"><pre><code>curl -s -X POST http://127.0.0.1:8000/expenses -H &quot;Content-Type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;Refund&quot;, &quot;amount&quot;: -5, &quot;category&quot;: &quot;food&quot;, &quot;spent_on&quot;: &quot;2026-10-05&quot;}&#x27; -w &quot;\nHTTP %{http_code}\n&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st4">422 Unprocessable Content</span><span class="lines">2 lines</span></summary><pre>{&quot;detail&quot;:[{&quot;type&quot;:&quot;greater_than&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;amount&quot;],&quot;msg&quot;:&quot;Input should be greater than 0&quot;,&quot;input&quot;:-5,&quot;ctx&quot;:{&quot;gt&quot;:0}}]}
+HTTP 422</pre></details>
+</article>
+<article class="cmd" id="errors-more-than-two-decimal-places" data-text="validation errors more than two decimal places  curl -s -x post http://127.0.0.1:8000/expenses -h &quot;content-type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;gas&quot;, &quot;amount&quot;: 9.999, &quot;category&quot;: &quot;transport&quot;, &quot;spent_on&quot;: &quot;2026-10-05&quot;}&#x27; -w &quot;\nhttp %{http_code}\n&quot;">
+  <h3><a href="#errors-more-than-two-decimal-places">More than two decimal places</a></h3>
+  
+  <div class="term"><pre><code>curl -s -X POST http://127.0.0.1:8000/expenses -H &quot;Content-Type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;Gas&quot;, &quot;amount&quot;: 9.999, &quot;category&quot;: &quot;transport&quot;, &quot;spent_on&quot;: &quot;2026-10-05&quot;}&#x27; -w &quot;\nHTTP %{http_code}\n&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st4">422 Unprocessable Content</span><span class="lines">2 lines</span></summary><pre>{&quot;detail&quot;:[{&quot;type&quot;:&quot;decimal_max_places&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;amount&quot;],&quot;msg&quot;:&quot;Decimal input should have no more than 2 decimal places&quot;,&quot;input&quot;:9.999,&quot;ctx&quot;:{&quot;decimal_places&quot;:2}}]}
+HTTP 422</pre></details>
+</article>
+<article class="cmd" id="errors-amount-over-the-1-000-000-limit" data-text="validation errors amount over the $1,000,000 limit  curl -s -x post http://127.0.0.1:8000/expenses -h &quot;content-type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;typo&quot;, &quot;amount&quot;: 1000000.01, &quot;category&quot;: &quot;rent&quot;, &quot;spent_on&quot;: &quot;2026-10-05&quot;}&#x27; -w &quot;\nhttp %{http_code}\n&quot;">
+  <h3><a href="#errors-amount-over-the-1-000-000-limit">Amount over the $1,000,000 limit</a></h3>
+  
+  <div class="term"><pre><code>curl -s -X POST http://127.0.0.1:8000/expenses -H &quot;Content-Type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;Typo&quot;, &quot;amount&quot;: 1000000.01, &quot;category&quot;: &quot;rent&quot;, &quot;spent_on&quot;: &quot;2026-10-05&quot;}&#x27; -w &quot;\nHTTP %{http_code}\n&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st4">422 Unprocessable Content</span><span class="lines">2 lines</span></summary><pre>{&quot;detail&quot;:&quot;amount must be at most 1,000,000.00&quot;}
+HTTP 422</pre></details>
+</article>
+<article class="cmd" id="errors-amount-sent-as-text" data-text="validation errors amount sent as text  curl -s -x post http://127.0.0.1:8000/expenses -h &quot;content-type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;snack&quot;, &quot;amount&quot;: &quot;abc&quot;, &quot;category&quot;: &quot;food&quot;, &quot;spent_on&quot;: &quot;2026-10-05&quot;}&#x27; -w &quot;\nhttp %{http_code}\n&quot;">
+  <h3><a href="#errors-amount-sent-as-text">Amount sent as text</a></h3>
+  
+  <div class="term"><pre><code>curl -s -X POST http://127.0.0.1:8000/expenses -H &quot;Content-Type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;Snack&quot;, &quot;amount&quot;: &quot;abc&quot;, &quot;category&quot;: &quot;food&quot;, &quot;spent_on&quot;: &quot;2026-10-05&quot;}&#x27; -w &quot;\nHTTP %{http_code}\n&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st4">422 Unprocessable Content</span><span class="lines">2 lines</span></summary><pre>{&quot;detail&quot;:[{&quot;type&quot;:&quot;decimal_parsing&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;amount&quot;],&quot;msg&quot;:&quot;Input should be a valid decimal&quot;,&quot;input&quot;:&quot;abc&quot;}]}
+HTTP 422</pre></details>
+</article>
+<article class="cmd" id="errors-empty-title" data-text="validation errors empty title  curl -s -x post http://127.0.0.1:8000/expenses -h &quot;content-type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;&quot;, &quot;amount&quot;: 5, &quot;category&quot;: &quot;food&quot;, &quot;spent_on&quot;: &quot;2026-10-05&quot;}&#x27; -w &quot;\nhttp %{http_code}\n&quot;">
+  <h3><a href="#errors-empty-title">Empty title</a></h3>
+  
+  <div class="term"><pre><code>curl -s -X POST http://127.0.0.1:8000/expenses -H &quot;Content-Type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;&quot;, &quot;amount&quot;: 5, &quot;category&quot;: &quot;food&quot;, &quot;spent_on&quot;: &quot;2026-10-05&quot;}&#x27; -w &quot;\nHTTP %{http_code}\n&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st4">422 Unprocessable Content</span><span class="lines">2 lines</span></summary><pre>{&quot;detail&quot;:[{&quot;type&quot;:&quot;string_too_short&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;title&quot;],&quot;msg&quot;:&quot;String should have at least 1 character&quot;,&quot;input&quot;:&quot;&quot;,&quot;ctx&quot;:{&quot;min_length&quot;:1}}]}
+HTTP 422</pre></details>
+</article>
+<article class="cmd" id="errors-title-that-is-only-spaces" data-text="validation errors title that is only spaces passes the shape check, then fails the business rule in expenseservice. curl -s -x post http://127.0.0.1:8000/expenses -h &quot;content-type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;   &quot;, &quot;amount&quot;: 5, &quot;category&quot;: &quot;food&quot;, &quot;spent_on&quot;: &quot;2026-10-05&quot;}&#x27; -w &quot;\nhttp %{http_code}\n&quot;">
+  <h3><a href="#errors-title-that-is-only-spaces">Title that is only spaces</a></h3>
+  <p class="desc">Passes the shape check, then fails the business rule in ExpenseService.</p>
+  <div class="term"><pre><code>curl -s -X POST http://127.0.0.1:8000/expenses -H &quot;Content-Type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;   &quot;, &quot;amount&quot;: 5, &quot;category&quot;: &quot;food&quot;, &quot;spent_on&quot;: &quot;2026-10-05&quot;}&#x27; -w &quot;\nHTTP %{http_code}\n&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st4">422 Unprocessable Content</span><span class="lines">2 lines</span></summary><pre>{&quot;detail&quot;:&quot;title must not be empty&quot;}
+HTTP 422</pre></details>
+</article>
+<article class="cmd" id="errors-date-in-the-future" data-text="validation errors date in the future  curl -s -x post http://127.0.0.1:8000/expenses -h &quot;content-type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;flight&quot;, &quot;amount&quot;: 300, &quot;category&quot;: &quot;travel&quot;, &quot;spent_on&quot;: &quot;2030-01-01&quot;}&#x27; -w &quot;\nhttp %{http_code}\n&quot;">
+  <h3><a href="#errors-date-in-the-future">Date in the future</a></h3>
+  
+  <div class="term"><pre><code>curl -s -X POST http://127.0.0.1:8000/expenses -H &quot;Content-Type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;Flight&quot;, &quot;amount&quot;: 300, &quot;category&quot;: &quot;travel&quot;, &quot;spent_on&quot;: &quot;2030-01-01&quot;}&#x27; -w &quot;\nHTTP %{http_code}\n&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st4">422 Unprocessable Content</span><span class="lines">2 lines</span></summary><pre>{&quot;detail&quot;:&quot;spent_on cannot be in the future&quot;}
+HTTP 422</pre></details>
+</article>
+<article class="cmd" id="errors-impossible-date" data-text="validation errors impossible date  curl -s -x post http://127.0.0.1:8000/expenses -h &quot;content-type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;taxi&quot;, &quot;amount&quot;: 20, &quot;category&quot;: &quot;transport&quot;, &quot;spent_on&quot;: &quot;2026-13-40&quot;}&#x27; -w &quot;\nhttp %{http_code}\n&quot;">
+  <h3><a href="#errors-impossible-date">Impossible date</a></h3>
+  
+  <div class="term"><pre><code>curl -s -X POST http://127.0.0.1:8000/expenses -H &quot;Content-Type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;Taxi&quot;, &quot;amount&quot;: 20, &quot;category&quot;: &quot;transport&quot;, &quot;spent_on&quot;: &quot;2026-13-40&quot;}&#x27; -w &quot;\nHTTP %{http_code}\n&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st4">422 Unprocessable Content</span><span class="lines">2 lines</span></summary><pre>{&quot;detail&quot;:[{&quot;type&quot;:&quot;date_from_datetime_parsing&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;spent_on&quot;],&quot;msg&quot;:&quot;Input should be a valid date or datetime, month value is outside expected range of 1-12&quot;,&quot;input&quot;:&quot;2026-13-40&quot;,&quot;ctx&quot;:{&quot;error&quot;:&quot;month value is outside expected range of 1-12&quot;}}]}
+HTTP 422</pre></details>
+</article>
+<article class="cmd" id="errors-missing-required-fields" data-text="validation errors missing required fields  curl -s -x post http://127.0.0.1:8000/expenses -h &quot;content-type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;no amount&quot;}&#x27; -w &quot;\nhttp %{http_code}\n&quot;">
+  <h3><a href="#errors-missing-required-fields">Missing required fields</a></h3>
+  
+  <div class="term"><pre><code>curl -s -X POST http://127.0.0.1:8000/expenses -H &quot;Content-Type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;No amount&quot;}&#x27; -w &quot;\nHTTP %{http_code}\n&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st4">422 Unprocessable Content</span><span class="lines">2 lines</span></summary><pre>{&quot;detail&quot;:[{&quot;type&quot;:&quot;missing&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;amount&quot;],&quot;msg&quot;:&quot;Field required&quot;,&quot;input&quot;:{&quot;title&quot;:&quot;No amount&quot;}},{&quot;type&quot;:&quot;missing&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;category&quot;],&quot;msg&quot;:&quot;Field required&quot;,&quot;input&quot;:{&quot;title&quot;:&quot;No amount&quot;}},{&quot;type&quot;:&quot;missing&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;spent_on&quot;],&quot;msg&quot;:&quot;Field required&quot;,&quot;input&quot;:{&quot;title&quot;:&quot;No amount&quot;}}]}
+HTTP 422</pre></details>
+</article>
+<article class="cmd" id="errors-broken-json-trailing-comma" data-text="validation errors broken json (trailing comma)  curl -s -x post http://127.0.0.1:8000/expenses -h &quot;content-type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;oops&quot;,}&#x27; -w &quot;\nhttp %{http_code}\n&quot;">
+  <h3><a href="#errors-broken-json-trailing-comma">Broken JSON (trailing comma)</a></h3>
+  
+  <div class="term"><pre><code>curl -s -X POST http://127.0.0.1:8000/expenses -H &quot;Content-Type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;Oops&quot;,}&#x27; -w &quot;\nHTTP %{http_code}\n&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st4">422 Unprocessable Content</span><span class="lines">2 lines</span></summary><pre>{&quot;detail&quot;:[{&quot;type&quot;:&quot;json_invalid&quot;,&quot;loc&quot;:[&quot;body&quot;,16],&quot;msg&quot;:&quot;JSON decode error&quot;,&quot;input&quot;:{},&quot;ctx&quot;:{&quot;error&quot;:&quot;Illegal trailing comma before end of object&quot;}}]}
+HTTP 422</pre></details>
+</article>
+</section><section class="sec" id="list" data-sec>
+<div class="sec-head"><h2>List and filter</h2><p class="route"><span class="m m-GET">GET</span> <code>/expenses</code></p></div>
+<p class="intro">Newest first. Filters and paging go in the query string. Keep the quotes around URLs that contain &quot;?&quot; or the macOS shell (zsh) treats it as a wildcard.</p>
+<article class="cmd" id="list-every-expense" data-text="list and filter every expense  curl -s &quot;http://127.0.0.1:8000/expenses&quot; | python3 -m json.tool">
+  <h3><a href="#list-every-expense">Every expense</a></h3>
+  
+  <div class="term"><pre><code>curl -s &quot;http://127.0.0.1:8000/expenses&quot; | python3 -m json.tool</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out"><summary>Output<span class="lines">92 lines</span></summary><pre>[
+    {
+        &quot;id&quot;: 5,
+        &quot;title&quot;: &quot;Concert ticket&quot;,
+        &quot;amount&quot;: 85.0,
+        &quot;category&quot;: &quot;entertainment&quot;,
+        &quot;spent_on&quot;: &quot;2026-10-08&quot;,
+        &quot;note&quot;: null,
+        &quot;created_at&quot;: &quot;2026-10-09 11:38:18&quot;,
+        &quot;updated_at&quot;: &quot;2026-10-09 11:38:18&quot;
+    },
+    {
+        &quot;id&quot;: 3,
+        &quot;title&quot;: &quot;Coffee&quot;,
+        &quot;amount&quot;: 4.75,
+        &quot;category&quot;: &quot;food&quot;,
+        &quot;spent_on&quot;: &quot;2026-10-07&quot;,
+        &quot;note&quot;: null,
+        &quot;created_at&quot;: &quot;2026-10-09 11:38:18&quot;,
+        &quot;updated_at&quot;: &quot;2026-10-09 11:38:18&quot;
+    },
+    {
+        &quot;id&quot;: 1,
+        &quot;title&quot;: &quot;Groceries&quot;,
+        &quot;amount&quot;: 42.5,
+        &quot;category&quot;: &quot;food&quot;,
+        &quot;spent_on&quot;: &quot;2026-10-05&quot;,
+        &quot;note&quot;: null,
+        &quot;created_at&quot;: &quot;2026-10-09 11:38:18&quot;,
+        &quot;updated_at&quot;: &quot;2026-10-09 11:38:18&quot;
+    },
+    {
+        &quot;id&quot;: 8,
+        &quot;title&quot;: &quot;Lunch&quot;,
+        &quot;amount&quot;: 12.5,
+        &quot;category&quot;: &quot;food&quot;,
+        &quot;spent_on&quot;: &quot;2026-10-03&quot;,
+        &quot;note&quot;: null,
+        &quot;created_at&quot;: &quot;2026-10-09 11:38:18&quot;,
+        &quot;updated_at&quot;: &quot;2026-10-09 11:38:18&quot;
+    },
+    {
+        &quot;id&quot;: 7,
+        &quot;title&quot;: &quot;Lunch&quot;,
+        &quot;amount&quot;: 12.5,
+        &quot;category&quot;: &quot;food&quot;,
+        &quot;spent_on&quot;: &quot;2026-10-02&quot;,
+        &quot;note&quot;: null,
+        &quot;created_at&quot;: &quot;2026-10-09 11:38:18&quot;,
+        &quot;updated_at&quot;: &quot;2026-10-09 11:38:18&quot;
+    },
+    {
+        &quot;id&quot;: 6,
+        &quot;title&quot;: &quot;Lunch&quot;,
+        &quot;amount&quot;: 12.5,
+        &quot;category&quot;: &quot;food&quot;,
+        &quot;spent_on&quot;: &quot;2026-10-01&quot;,
+        &quot;note&quot;: null,
+        &quot;created_at&quot;: &quot;2026-10-09 11:38:18&quot;,
+        &quot;updated_at&quot;: &quot;2026-10-09 11:38:18&quot;
+    },
+    {
+        &quot;id&quot;: 2,
+        &quot;title&quot;: &quot;MetroCard refill&quot;,
+        &quot;amount&quot;: 34.0,
+        &quot;category&quot;: &quot;transport&quot;,
+        &quot;spent_on&quot;: &quot;2026-09-28&quot;,
+        &quot;note&quot;: &quot;Unlimited 7-day&quot;,
+        &quot;created_at&quot;: &quot;2026-10-09 11:38:18&quot;,
+        &quot;updated_at&quot;: &quot;2026-10-09 11:38:18&quot;
+    },
+    {
+        &quot;id&quot;: 4,
+        &quot;title&quot;: &quot;Notebook&quot;,
+        &quot;amount&quot;: 19.99,
+        &quot;category&quot;: &quot;education&quot;,
+        &quot;spent_on&quot;: &quot;2026-09-15&quot;,
+        &quot;note&quot;: null,
+        &quot;created_at&quot;: &quot;2026-10-09 11:38:18&quot;,
+        &quot;updated_at&quot;: &quot;2026-10-09 11:38:18&quot;
+    },
+    {
+        &quot;id&quot;: 9,
+        &quot;title&quot;: &quot;Phone bill&quot;,
+        &quot;amount&quot;: 35.0,
+        &quot;category&quot;: &quot;utilities&quot;,
+        &quot;spent_on&quot;: &quot;2026-09-01&quot;,
+        &quot;note&quot;: null,
+        &quot;created_at&quot;: &quot;2026-10-09 11:38:18&quot;,
+        &quot;updated_at&quot;: &quot;2026-10-09 11:38:18&quot;
+    }
+]</pre></details>
+</article>
+<article class="cmd" id="list-every-expense-as-a-compact-table" data-text="list and filter every expense as a compact table  curl -s &quot;http://127.0.0.1:8000/expenses&quot; | python3 -c &#x27;import sys, json; rows = json.load(sys.stdin); [print(&quot;%4d  %s  %-13s %8.2f  %s&quot; % (e[&quot;id&quot;], e[&quot;spent_on&quot;], e[&quot;category&quot;], e[&quot;amount&quot;], e[&quot;title&quot;])) for e in rows]&#x27;">
+  <h3><a href="#list-every-expense-as-a-compact-table">Every expense as a compact table</a></h3>
+  
+  <div class="term"><pre><code>curl -s &quot;http://127.0.0.1:8000/expenses&quot; | python3 -c &#x27;import sys, json; rows = json.load(sys.stdin); [print(&quot;%4d  %s  %-13s %8.2f  %s&quot; % (e[&quot;id&quot;], e[&quot;spent_on&quot;], e[&quot;category&quot;], e[&quot;amount&quot;], e[&quot;title&quot;])) for e in rows]&#x27;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">9 lines</span></summary><pre>   5  2026-10-08  entertainment    85.00  Concert ticket
+   3  2026-10-07  food              4.75  Coffee
+   1  2026-10-05  food             42.50  Groceries
+   8  2026-10-03  food             12.50  Lunch
+   7  2026-10-02  food             12.50  Lunch
+   6  2026-10-01  food             12.50  Lunch
+   2  2026-09-28  transport        34.00  MetroCard refill
+   4  2026-09-15  education        19.99  Notebook
+   9  2026-09-01  utilities        35.00  Phone bill</pre></details>
+</article>
+<article class="cmd" id="list-how-many-are-there" data-text="list and filter how many are there?  curl -s &quot;http://127.0.0.1:8000/expenses&quot; | python3 -c &#x27;import sys, json; print(len(json.load(sys.stdin)), &quot;expenses&quot;)&#x27;">
+  <h3><a href="#list-how-many-are-there">How many are there?</a></h3>
+  
+  <div class="term"><pre><code>curl -s &quot;http://127.0.0.1:8000/expenses&quot; | python3 -c &#x27;import sys, json; print(len(json.load(sys.stdin)), &quot;expenses&quot;)&#x27;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">1 line</span></summary><pre>9 expenses</pre></details>
+</article>
+<article class="cmd" id="list-only-one-category" data-text="list and filter only one category  curl -s &quot;http://127.0.0.1:8000/expenses?category=food&quot; | python3 -c &#x27;import sys, json; rows = json.load(sys.stdin); [print(&quot;%4d  %s  %-13s %8.2f  %s&quot; % (e[&quot;id&quot;], e[&quot;spent_on&quot;], e[&quot;category&quot;], e[&quot;amount&quot;], e[&quot;title&quot;])) for e in rows]&#x27;">
+  <h3><a href="#list-only-one-category">Only one category</a></h3>
+  
+  <div class="term"><pre><code>curl -s &quot;http://127.0.0.1:8000/expenses?category=food&quot; | python3 -c &#x27;import sys, json; rows = json.load(sys.stdin); [print(&quot;%4d  %s  %-13s %8.2f  %s&quot; % (e[&quot;id&quot;], e[&quot;spent_on&quot;], e[&quot;category&quot;], e[&quot;amount&quot;], e[&quot;title&quot;])) for e in rows]&#x27;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">5 lines</span></summary><pre>   3  2026-10-07  food              4.75  Coffee
+   1  2026-10-05  food             42.50  Groceries
+   8  2026-10-03  food             12.50  Lunch
+   7  2026-10-02  food             12.50  Lunch
+   6  2026-10-01  food             12.50  Lunch</pre></details>
+</article>
+<article class="cmd" id="list-category-matching-ignores-case" data-text="list and filter category matching ignores case  curl -s &quot;http://127.0.0.1:8000/expenses?category=food&quot; | python3 -c &#x27;import sys, json; print(len(json.load(sys.stdin)), &quot;expenses&quot;)&#x27;">
+  <h3><a href="#list-category-matching-ignores-case">Category matching ignores case</a></h3>
+  
+  <div class="term"><pre><code>curl -s &quot;http://127.0.0.1:8000/expenses?category=FOOD&quot; | python3 -c &#x27;import sys, json; print(len(json.load(sys.stdin)), &quot;expenses&quot;)&#x27;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">1 line</span></summary><pre>5 expenses</pre></details>
+</article>
+<article class="cmd" id="list-only-one-month" data-text="list and filter only one month  curl -s &quot;http://127.0.0.1:8000/expenses?month=2026-10&quot; | python3 -c &#x27;import sys, json; rows = json.load(sys.stdin); [print(&quot;%4d  %s  %-13s %8.2f  %s&quot; % (e[&quot;id&quot;], e[&quot;spent_on&quot;], e[&quot;category&quot;], e[&quot;amount&quot;], e[&quot;title&quot;])) for e in rows]&#x27;">
+  <h3><a href="#list-only-one-month">Only one month</a></h3>
+  
+  <div class="term"><pre><code>curl -s &quot;http://127.0.0.1:8000/expenses?month=2026-10&quot; | python3 -c &#x27;import sys, json; rows = json.load(sys.stdin); [print(&quot;%4d  %s  %-13s %8.2f  %s&quot; % (e[&quot;id&quot;], e[&quot;spent_on&quot;], e[&quot;category&quot;], e[&quot;amount&quot;], e[&quot;title&quot;])) for e in rows]&#x27;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">6 lines</span></summary><pre>   5  2026-10-08  entertainment    85.00  Concert ticket
+   3  2026-10-07  food              4.75  Coffee
+   1  2026-10-05  food             42.50  Groceries
+   8  2026-10-03  food             12.50  Lunch
+   7  2026-10-02  food             12.50  Lunch
+   6  2026-10-01  food             12.50  Lunch</pre></details>
+</article>
+<article class="cmd" id="list-category-and-month-together" data-text="list and filter category and month together  curl -s &quot;http://127.0.0.1:8000/expenses?category=food&amp;month=2026-10&quot; | python3 -c &#x27;import sys, json; rows = json.load(sys.stdin); [print(&quot;%4d  %s  %-13s %8.2f  %s&quot; % (e[&quot;id&quot;], e[&quot;spent_on&quot;], e[&quot;category&quot;], e[&quot;amount&quot;], e[&quot;title&quot;])) for e in rows]&#x27;">
+  <h3><a href="#list-category-and-month-together">Category and month together</a></h3>
+  
+  <div class="term"><pre><code>curl -s &quot;http://127.0.0.1:8000/expenses?category=food&amp;month=2026-10&quot; | python3 -c &#x27;import sys, json; rows = json.load(sys.stdin); [print(&quot;%4d  %s  %-13s %8.2f  %s&quot; % (e[&quot;id&quot;], e[&quot;spent_on&quot;], e[&quot;category&quot;], e[&quot;amount&quot;], e[&quot;title&quot;])) for e in rows]&#x27;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">5 lines</span></summary><pre>   3  2026-10-07  food              4.75  Coffee
+   1  2026-10-05  food             42.50  Groceries
+   8  2026-10-03  food             12.50  Lunch
+   7  2026-10-02  food             12.50  Lunch
+   6  2026-10-01  food             12.50  Lunch</pre></details>
+</article>
+<article class="cmd" id="list-first-page-of-3" data-text="list and filter first page of 3  curl -s &quot;http://127.0.0.1:8000/expenses?limit=3&amp;offset=0&quot; | python3 -c &#x27;import sys, json; rows = json.load(sys.stdin); [print(&quot;%4d  %s  %-13s %8.2f  %s&quot; % (e[&quot;id&quot;], e[&quot;spent_on&quot;], e[&quot;category&quot;], e[&quot;amount&quot;], e[&quot;title&quot;])) for e in rows]&#x27;">
+  <h3><a href="#list-first-page-of-3">First page of 3</a></h3>
+  
+  <div class="term"><pre><code>curl -s &quot;http://127.0.0.1:8000/expenses?limit=3&amp;offset=0&quot; | python3 -c &#x27;import sys, json; rows = json.load(sys.stdin); [print(&quot;%4d  %s  %-13s %8.2f  %s&quot; % (e[&quot;id&quot;], e[&quot;spent_on&quot;], e[&quot;category&quot;], e[&quot;amount&quot;], e[&quot;title&quot;])) for e in rows]&#x27;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">3 lines</span></summary><pre>   5  2026-10-08  entertainment    85.00  Concert ticket
+   3  2026-10-07  food              4.75  Coffee
+   1  2026-10-05  food             42.50  Groceries</pre></details>
+</article>
+<article class="cmd" id="list-second-page-of-3" data-text="list and filter second page of 3  curl -s &quot;http://127.0.0.1:8000/expenses?limit=3&amp;offset=3&quot; | python3 -c &#x27;import sys, json; rows = json.load(sys.stdin); [print(&quot;%4d  %s  %-13s %8.2f  %s&quot; % (e[&quot;id&quot;], e[&quot;spent_on&quot;], e[&quot;category&quot;], e[&quot;amount&quot;], e[&quot;title&quot;])) for e in rows]&#x27;">
+  <h3><a href="#list-second-page-of-3">Second page of 3</a></h3>
+  
+  <div class="term"><pre><code>curl -s &quot;http://127.0.0.1:8000/expenses?limit=3&amp;offset=3&quot; | python3 -c &#x27;import sys, json; rows = json.load(sys.stdin); [print(&quot;%4d  %s  %-13s %8.2f  %s&quot; % (e[&quot;id&quot;], e[&quot;spent_on&quot;], e[&quot;category&quot;], e[&quot;amount&quot;], e[&quot;title&quot;])) for e in rows]&#x27;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">3 lines</span></summary><pre>   8  2026-10-03  food             12.50  Lunch
+   7  2026-10-02  food             12.50  Lunch
+   6  2026-10-01  food             12.50  Lunch</pre></details>
+</article>
+<article class="cmd" id="list-badly-written-month" data-text="list and filter badly written month months must look like 2026-09. curl -s -w &quot;\nhttp %{http_code}\n&quot; &quot;http://127.0.0.1:8000/expenses?month=2026-9&quot;">
+  <h3><a href="#list-badly-written-month">Badly written month</a></h3>
+  <p class="desc">Months must look like 2026-09.</p>
+  <div class="term"><pre><code>curl -s -w &quot;\nHTTP %{http_code}\n&quot; &quot;http://127.0.0.1:8000/expenses?month=2026-9&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st4">422 Unprocessable Content</span><span class="lines">2 lines</span></summary><pre>{&quot;detail&quot;:&quot;month must look like YYYY-MM, e.g. 2026-09&quot;}
+HTTP 422</pre></details>
+</article>
+<article class="cmd" id="list-page-size-over-the-500-limit" data-text="list and filter page size over the 500 limit  curl -s -w &quot;\nhttp %{http_code}\n&quot; &quot;http://127.0.0.1:8000/expenses?limit=1000&quot;">
+  <h3><a href="#list-page-size-over-the-500-limit">Page size over the 500 limit</a></h3>
+  
+  <div class="term"><pre><code>curl -s -w &quot;\nHTTP %{http_code}\n&quot; &quot;http://127.0.0.1:8000/expenses?limit=1000&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st4">422 Unprocessable Content</span><span class="lines">2 lines</span></summary><pre>{&quot;detail&quot;:[{&quot;type&quot;:&quot;less_than_equal&quot;,&quot;loc&quot;:[&quot;query&quot;,&quot;limit&quot;],&quot;msg&quot;:&quot;Input should be less than or equal to 500&quot;,&quot;input&quot;:&quot;1000&quot;,&quot;ctx&quot;:{&quot;le&quot;:500}}]}
+HTTP 422</pre></details>
+</article>
+</section><section class="sec" id="view" data-sec>
+<div class="sec-head"><h2>View one expense</h2><p class="route"><span class="m m-GET">GET</span> <code>/expenses/{id}</code></p></div>
+<p class="intro">Uses $ID from “Add one and save its id”. In a new terminal, type the number instead.</p>
+<article class="cmd" id="view-view-by-id" data-text="view one expense view by id  curl -s &quot;http://127.0.0.1:8000/expenses/$id&quot; | python3 -m json.tool">
+  <h3><a href="#view-view-by-id">View by id</a></h3>
+  
+  <div class="term"><pre><code>curl -s &quot;http://127.0.0.1:8000/expenses/$ID&quot; | python3 -m json.tool</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">10 lines</span></summary><pre>{
+    &quot;id&quot;: 5,
+    &quot;title&quot;: &quot;Concert ticket&quot;,
+    &quot;amount&quot;: 85.0,
+    &quot;category&quot;: &quot;entertainment&quot;,
+    &quot;spent_on&quot;: &quot;2026-10-08&quot;,
+    &quot;note&quot;: null,
+    &quot;created_at&quot;: &quot;2026-10-09 11:38:18&quot;,
+    &quot;updated_at&quot;: &quot;2026-10-09 11:38:18&quot;
+}</pre></details>
+</article>
+<article class="cmd" id="view-id-that-does-not-exist" data-text="view one expense id that does not exist  curl -s -w &quot;\nhttp %{http_code}\n&quot; http://127.0.0.1:8000/expenses/99999">
+  <h3><a href="#view-id-that-does-not-exist">Id that does not exist</a></h3>
+  
+  <div class="term"><pre><code>curl -s -w &quot;\nHTTP %{http_code}\n&quot; http://127.0.0.1:8000/expenses/99999</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st4">404 Not Found</span><span class="lines">2 lines</span></summary><pre>{&quot;detail&quot;:&quot;Expense 99999 not found&quot;}
+HTTP 404</pre></details>
+</article>
+<article class="cmd" id="view-id-that-is-not-a-number" data-text="view one expense id that is not a number  curl -s -w &quot;\nhttp %{http_code}\n&quot; http://127.0.0.1:8000/expenses/abc">
+  <h3><a href="#view-id-that-is-not-a-number">Id that is not a number</a></h3>
+  
+  <div class="term"><pre><code>curl -s -w &quot;\nHTTP %{http_code}\n&quot; http://127.0.0.1:8000/expenses/abc</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st4">422 Unprocessable Content</span><span class="lines">2 lines</span></summary><pre>{&quot;detail&quot;:[{&quot;type&quot;:&quot;int_parsing&quot;,&quot;loc&quot;:[&quot;path&quot;,&quot;expense_id&quot;],&quot;msg&quot;:&quot;Input should be a valid integer, unable to parse string as an integer&quot;,&quot;input&quot;:&quot;abc&quot;}]}
+HTTP 422</pre></details>
+</article>
+</section><section class="sec" id="update" data-sec>
+<div class="sec-head"><h2>Update an expense</h2><p class="route"><span class="m m-PUT">PUT</span> <code>/expenses/{id}</code></p></div>
+<p class="intro">PUT replaces the whole record, so send every field. updated_at changes; created_at does not.</p>
+<article class="cmd" id="update-update-every-field" data-text="update an expense update every field  curl -s -x put &quot;http://127.0.0.1:8000/expenses/$id&quot; -h &quot;content-type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;concert ticket (balcony)&quot;, &quot;amount&quot;: 65, &quot;category&quot;: &quot;entertainment&quot;, &quot;spent_on&quot;: &quot;2026-10-08&quot;, &quot;note&quot;: &quot;swapped seats&quot;}&#x27; | python3 -m json.tool">
+  <h3><a href="#update-update-every-field">Update every field</a></h3>
+  
+  <div class="term"><pre><code>curl -s -X PUT &quot;http://127.0.0.1:8000/expenses/$ID&quot; -H &quot;Content-Type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;Concert ticket (balcony)&quot;, &quot;amount&quot;: 65, &quot;category&quot;: &quot;entertainment&quot;, &quot;spent_on&quot;: &quot;2026-10-08&quot;, &quot;note&quot;: &quot;Swapped seats&quot;}&#x27; | python3 -m json.tool</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">10 lines</span></summary><pre>{
+    &quot;id&quot;: 5,
+    &quot;title&quot;: &quot;Concert ticket (balcony)&quot;,
+    &quot;amount&quot;: 65.0,
+    &quot;category&quot;: &quot;entertainment&quot;,
+    &quot;spent_on&quot;: &quot;2026-10-08&quot;,
+    &quot;note&quot;: &quot;Swapped seats&quot;,
+    &quot;created_at&quot;: &quot;2026-10-09 11:38:18&quot;,
+    &quot;updated_at&quot;: &quot;2026-10-09 11:38:19&quot;
+}</pre></details>
+</article>
+<article class="cmd" id="update-leaving-fields-out-is-rejected" data-text="update an expense leaving fields out is rejected  curl -s -w &quot;\nhttp %{http_code}\n&quot; -x put &quot;http://127.0.0.1:8000/expenses/$id&quot; -h &quot;content-type: application/json&quot; -d &#x27;{&quot;amount&quot;: 70}&#x27;">
+  <h3><a href="#update-leaving-fields-out-is-rejected">Leaving fields out is rejected</a></h3>
+  
+  <div class="term"><pre><code>curl -s -w &quot;\nHTTP %{http_code}\n&quot; -X PUT &quot;http://127.0.0.1:8000/expenses/$ID&quot; -H &quot;Content-Type: application/json&quot; -d &#x27;{&quot;amount&quot;: 70}&#x27;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st4">422 Unprocessable Content</span><span class="lines">2 lines</span></summary><pre>{&quot;detail&quot;:[{&quot;type&quot;:&quot;missing&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;title&quot;],&quot;msg&quot;:&quot;Field required&quot;,&quot;input&quot;:{&quot;amount&quot;:70}},{&quot;type&quot;:&quot;missing&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;category&quot;],&quot;msg&quot;:&quot;Field required&quot;,&quot;input&quot;:{&quot;amount&quot;:70}},{&quot;type&quot;:&quot;missing&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;spent_on&quot;],&quot;msg&quot;:&quot;Field required&quot;,&quot;input&quot;:{&quot;amount&quot;:70}}]}
+HTTP 422</pre></details>
+</article>
+<article class="cmd" id="update-same-validation-rules-as-adding" data-text="update an expense same validation rules as adding  curl -s -w &quot;\nhttp %{http_code}\n&quot; -x put &quot;http://127.0.0.1:8000/expenses/$id&quot; -h &quot;content-type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;concert&quot;, &quot;amount&quot;: -1, &quot;category&quot;: &quot;entertainment&quot;, &quot;spent_on&quot;: &quot;2026-10-08&quot;}&#x27;">
+  <h3><a href="#update-same-validation-rules-as-adding">Same validation rules as adding</a></h3>
+  
+  <div class="term"><pre><code>curl -s -w &quot;\nHTTP %{http_code}\n&quot; -X PUT &quot;http://127.0.0.1:8000/expenses/$ID&quot; -H &quot;Content-Type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;Concert&quot;, &quot;amount&quot;: -1, &quot;category&quot;: &quot;entertainment&quot;, &quot;spent_on&quot;: &quot;2026-10-08&quot;}&#x27;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st4">422 Unprocessable Content</span><span class="lines">2 lines</span></summary><pre>{&quot;detail&quot;:[{&quot;type&quot;:&quot;greater_than&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;amount&quot;],&quot;msg&quot;:&quot;Input should be greater than 0&quot;,&quot;input&quot;:-1,&quot;ctx&quot;:{&quot;gt&quot;:0}}]}
+HTTP 422</pre></details>
+</article>
+<article class="cmd" id="update-updating-an-id-that-does-not-exist" data-text="update an expense updating an id that does not exist  curl -s -w &quot;\nhttp %{http_code}\n&quot; -x put http://127.0.0.1:8000/expenses/99999 -h &quot;content-type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;ghost&quot;, &quot;amount&quot;: 1, &quot;category&quot;: &quot;misc&quot;, &quot;spent_on&quot;: &quot;2026-10-08&quot;}&#x27;">
+  <h3><a href="#update-updating-an-id-that-does-not-exist">Updating an id that does not exist</a></h3>
+  
+  <div class="term"><pre><code>curl -s -w &quot;\nHTTP %{http_code}\n&quot; -X PUT http://127.0.0.1:8000/expenses/99999 -H &quot;Content-Type: application/json&quot; -d &#x27;{&quot;title&quot;: &quot;Ghost&quot;, &quot;amount&quot;: 1, &quot;category&quot;: &quot;misc&quot;, &quot;spent_on&quot;: &quot;2026-10-08&quot;}&#x27;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st4">404 Not Found</span><span class="lines">2 lines</span></summary><pre>{&quot;detail&quot;:&quot;Expense 99999 not found&quot;}
+HTTP 404</pre></details>
+</article>
+</section><section class="sec" id="delete" data-sec>
+<div class="sec-head"><h2>Delete an expense</h2><p class="route"><span class="m m-DELETE">DELETE</span> <code>/expenses/{id}</code></p></div>
+<p class="intro">A successful delete returns 204 No Content: a status and headers, no body.</p>
+<article class="cmd" id="delete-delete-by-id" data-text="delete an expense delete by id  curl -i -x delete &quot;http://127.0.0.1:8000/expenses/$id&quot;">
+  <h3><a href="#delete-delete-by-id">Delete by id</a></h3>
+  
+  <div class="term"><pre><code>curl -i -X DELETE &quot;http://127.0.0.1:8000/expenses/$ID&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st2">204 No Content</span><span class="lines">10 lines</span></summary><pre>  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+HTTP/1.1 204 No Content
+date: Fri, 09 Oct 2026 11:38:19 GMT
+server: uvicorn
+x-request-id: a05bb890
+x-response-time-ms: 2.0</pre></details>
+</article>
+<article class="cmd" id="delete-it-is-gone" data-text="delete an expense it is gone  curl -s -w &quot;\nhttp %{http_code}\n&quot; &quot;http://127.0.0.1:8000/expenses/$id&quot;">
+  <h3><a href="#delete-it-is-gone">It is gone</a></h3>
+  
+  <div class="term"><pre><code>curl -s -w &quot;\nHTTP %{http_code}\n&quot; &quot;http://127.0.0.1:8000/expenses/$ID&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st4">404 Not Found</span><span class="lines">2 lines</span></summary><pre>{&quot;detail&quot;:&quot;Expense 5 not found&quot;}
+HTTP 404</pre></details>
+</article>
+<article class="cmd" id="delete-deleting-it-again" data-text="delete an expense deleting it again  curl -s -w &quot;\nhttp %{http_code}\n&quot; -x delete &quot;http://127.0.0.1:8000/expenses/$id&quot;">
+  <h3><a href="#delete-deleting-it-again">Deleting it again</a></h3>
+  
+  <div class="term"><pre><code>curl -s -w &quot;\nHTTP %{http_code}\n&quot; -X DELETE &quot;http://127.0.0.1:8000/expenses/$ID&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st4">404 Not Found</span><span class="lines">2 lines</span></summary><pre>{&quot;detail&quot;:&quot;Expense 5 not found&quot;}
+HTTP 404</pre></details>
+</article>
+</section><section class="sec" id="summary" data-sec>
+<div class="sec-head"><h2>Summaries</h2><p class="route"><span class="m m-GET">GET</span> <code>/expenses/summary</code></p></div>
+<p class="intro">Totals computed by SQL GROUP BY queries. by=month is the default.</p>
+<article class="cmd" id="summary-totals-per-month" data-text="summaries totals per month  curl -s &quot;http://127.0.0.1:8000/expenses/summary?by=month&quot; | python3 -m json.tool">
+  <h3><a href="#summary-totals-per-month">Totals per month</a></h3>
+  
+  <div class="term"><pre><code>curl -s &quot;http://127.0.0.1:8000/expenses/summary?by=month&quot; | python3 -m json.tool</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out"><summary>Output<span class="lines">18 lines</span></summary><pre>{
+    &quot;by&quot;: &quot;month&quot;,
+    &quot;grand_total&quot;: 173.74,
+    &quot;rows&quot;: [
+        {
+            &quot;group&quot;: &quot;2026-09&quot;,
+            &quot;count&quot;: 3,
+            &quot;total&quot;: 88.99,
+            &quot;average&quot;: 29.66
+        },
+        {
+            &quot;group&quot;: &quot;2026-10&quot;,
+            &quot;count&quot;: 5,
+            &quot;total&quot;: 84.75,
+            &quot;average&quot;: 16.95
+        }
+    ]
+}</pre></details>
+</article>
+<article class="cmd" id="summary-months-of-one-year-only" data-text="summaries months of one year only  curl -s &quot;http://127.0.0.1:8000/expenses/summary?by=month&amp;year=2026&quot; | python3 -m json.tool">
+  <h3><a href="#summary-months-of-one-year-only">Months of one year only</a></h3>
+  
+  <div class="term"><pre><code>curl -s &quot;http://127.0.0.1:8000/expenses/summary?by=month&amp;year=2026&quot; | python3 -m json.tool</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out"><summary>Output<span class="lines">18 lines</span></summary><pre>{
+    &quot;by&quot;: &quot;month&quot;,
+    &quot;grand_total&quot;: 173.74,
+    &quot;rows&quot;: [
+        {
+            &quot;group&quot;: &quot;2026-09&quot;,
+            &quot;count&quot;: 3,
+            &quot;total&quot;: 88.99,
+            &quot;average&quot;: 29.66
+        },
+        {
+            &quot;group&quot;: &quot;2026-10&quot;,
+            &quot;count&quot;: 5,
+            &quot;total&quot;: 84.75,
+            &quot;average&quot;: 16.95
+        }
+    ]
+}</pre></details>
+</article>
+<article class="cmd" id="summary-totals-per-category-biggest-first" data-text="summaries totals per category, biggest first  curl -s &quot;http://127.0.0.1:8000/expenses/summary?by=category&quot; | python3 -m json.tool">
+  <h3><a href="#summary-totals-per-category-biggest-first">Totals per category, biggest first</a></h3>
+  
+  <div class="term"><pre><code>curl -s &quot;http://127.0.0.1:8000/expenses/summary?by=category&quot; | python3 -m json.tool</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out"><summary>Output<span class="lines">30 lines</span></summary><pre>{
+    &quot;by&quot;: &quot;category&quot;,
+    &quot;grand_total&quot;: 173.74,
+    &quot;rows&quot;: [
+        {
+            &quot;group&quot;: &quot;food&quot;,
+            &quot;count&quot;: 5,
+            &quot;total&quot;: 84.75,
+            &quot;average&quot;: 16.95
+        },
+        {
+            &quot;group&quot;: &quot;utilities&quot;,
+            &quot;count&quot;: 1,
+            &quot;total&quot;: 35.0,
+            &quot;average&quot;: 35.0
+        },
+        {
+            &quot;group&quot;: &quot;transport&quot;,
+            &quot;count&quot;: 1,
+            &quot;total&quot;: 34.0,
+            &quot;average&quot;: 34.0
+        },
+        {
+            &quot;group&quot;: &quot;education&quot;,
+            &quot;count&quot;: 1,
+            &quot;total&quot;: 19.99,
+            &quot;average&quot;: 19.99
+        }
+    ]
+}</pre></details>
+</article>
+<article class="cmd" id="summary-categories-for-one-month" data-text="summaries categories for one month  curl -s &quot;http://127.0.0.1:8000/expenses/summary?by=category&amp;month=2026-10&quot; | python3 -m json.tool">
+  <h3><a href="#summary-categories-for-one-month">Categories for one month</a></h3>
+  
+  <div class="term"><pre><code>curl -s &quot;http://127.0.0.1:8000/expenses/summary?by=category&amp;month=2026-10&quot; | python3 -m json.tool</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">12 lines</span></summary><pre>{
+    &quot;by&quot;: &quot;category&quot;,
+    &quot;grand_total&quot;: 84.75,
+    &quot;rows&quot;: [
+        {
+            &quot;group&quot;: &quot;food&quot;,
+            &quot;count&quot;: 5,
+            &quot;total&quot;: 84.75,
+            &quot;average&quot;: 16.95
+        }
+    ]
+}</pre></details>
+</article>
+<article class="cmd" id="summary-leave-out-by-to-get-months" data-text="summaries leave out by to get months  curl -s &quot;http://127.0.0.1:8000/expenses/summary&quot;">
+  <h3><a href="#summary-leave-out-by-to-get-months">Leave out by to get months</a></h3>
+  
+  <div class="term"><pre><code>curl -s &quot;http://127.0.0.1:8000/expenses/summary&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">1 line</span></summary><pre>{&quot;by&quot;:&quot;month&quot;,&quot;grand_total&quot;:173.74,&quot;rows&quot;:[{&quot;group&quot;:&quot;2026-09&quot;,&quot;count&quot;:3,&quot;total&quot;:88.99,&quot;average&quot;:29.66},{&quot;group&quot;:&quot;2026-10&quot;,&quot;count&quot;:5,&quot;total&quot;:84.75,&quot;average&quot;:16.95}]}</pre></details>
+</article>
+<article class="cmd" id="summary-category-spending-as-a-text-bar-chart" data-text="summaries category spending as a text bar chart  curl -s &quot;http://127.0.0.1:8000/expenses/summary?by=category&quot; | python3 -c &#x27;import sys, json; d = json.load(sys.stdin); [print(&quot;%-14s %9.2f  %s&quot; % (r[&quot;group&quot;], r[&quot;total&quot;], &quot;#&quot; * round(r[&quot;total&quot;] / d[&quot;grand_total&quot;] * 40))) for r in d[&quot;rows&quot;]]&#x27;">
+  <h3><a href="#summary-category-spending-as-a-text-bar-chart">Category spending as a text bar chart</a></h3>
+  
+  <div class="term"><pre><code>curl -s &quot;http://127.0.0.1:8000/expenses/summary?by=category&quot; | python3 -c &#x27;import sys, json; d = json.load(sys.stdin); [print(&quot;%-14s %9.2f  %s&quot; % (r[&quot;group&quot;], r[&quot;total&quot;], &quot;#&quot; * round(r[&quot;total&quot;] / d[&quot;grand_total&quot;] * 40))) for r in d[&quot;rows&quot;]]&#x27;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">4 lines</span></summary><pre>food               84.75  ####################
+utilities          35.00  ########
+transport          34.00  ########
+education          19.99  #####</pre></details>
+</article>
+<article class="cmd" id="summary-unknown-grouping" data-text="summaries unknown grouping  curl -s -w &quot;\nhttp %{http_code}\n&quot; &quot;http://127.0.0.1:8000/expenses/summary?by=week&quot;">
+  <h3><a href="#summary-unknown-grouping">Unknown grouping</a></h3>
+  
+  <div class="term"><pre><code>curl -s -w &quot;\nHTTP %{http_code}\n&quot; &quot;http://127.0.0.1:8000/expenses/summary?by=week&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st4">422 Unprocessable Content</span><span class="lines">2 lines</span></summary><pre>{&quot;detail&quot;:[{&quot;type&quot;:&quot;literal_error&quot;,&quot;loc&quot;:[&quot;query&quot;,&quot;by&quot;],&quot;msg&quot;:&quot;Input should be &#x27;month&#x27; or &#x27;category&#x27;&quot;,&quot;input&quot;:&quot;week&quot;,&quot;ctx&quot;:{&quot;expected&quot;:&quot;&#x27;month&#x27; or &#x27;category&#x27;&quot;}}]}
+HTTP 422</pre></details>
+</article>
+<article class="cmd" id="summary-badly-written-month" data-text="summaries badly written month  curl -s -w &quot;\nhttp %{http_code}\n&quot; &quot;http://127.0.0.1:8000/expenses/summary?by=category&amp;month=oct&quot;">
+  <h3><a href="#summary-badly-written-month">Badly written month</a></h3>
+  
+  <div class="term"><pre><code>curl -s -w &quot;\nHTTP %{http_code}\n&quot; &quot;http://127.0.0.1:8000/expenses/summary?by=category&amp;month=Oct&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st4">422 Unprocessable Content</span><span class="lines">2 lines</span></summary><pre>{&quot;detail&quot;:&quot;month must look like YYYY-MM, e.g. 2026-09&quot;}
+HTTP 422</pre></details>
+</article>
+</section><section class="sec" id="headers" data-sec>
+<div class="sec-head"><h2>Headers, timing and CORS</h2></div>
+<p class="intro">What travels with each request. Every response carries X-Request-ID, the same id the server prints in Terminal 1, and X-Response-Time-ms, how long the server spent on it.</p>
+<article class="cmd" id="headers-status-line-and-all-response-headers" data-text="headers, timing and cors status line and all response headers  curl -i &quot;http://127.0.0.1:8000/expenses?limit=1&quot;">
+  <h3><a href="#headers-status-line-and-all-response-headers">Status line and all response headers</a></h3>
+  
+  <div class="term"><pre><code>curl -i &quot;http://127.0.0.1:8000/expenses?limit=1&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st2">200 OK</span><span class="lines">14 lines</span></summary><pre>  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+100   165  100   165    0     0  78459      0 --:--:-- --:--:-- --:--:-- 82500
+HTTP/1.1 200 OK
+date: Fri, 09 Oct 2026 11:38:19 GMT
+server: uvicorn
+content-length: 165
+content-type: application/json
+x-request-id: c91ff26f
+x-response-time-ms: 1.0
+
+[{&quot;id&quot;:3,&quot;title&quot;:&quot;Coffee&quot;,&quot;amount&quot;:4.75,&quot;category&quot;:&quot;food&quot;,&quot;spent_on&quot;:&quot;2026-10-07&quot;,&quot;note&quot;:null,&quot;created_at&quot;:&quot;2026-10-09 11:38:18&quot;,&quot;updated_at&quot;:&quot;2026-10-09 11:38:18&quot;}]</pre></details>
+</article>
+<article class="cmd" id="headers-everything-curl-sends-and-receives" data-text="headers, timing and cors everything curl sends and receives lines starting with &gt; are the request, &lt; the response. curl -sv &quot;http://127.0.0.1:8000/expenses?limit=1&quot; -o /dev/null">
+  <h3><a href="#headers-everything-curl-sends-and-receives">Everything curl sends and receives</a></h3>
+  <p class="desc">Lines starting with &gt; are the request, &lt; the response.</p>
+  <div class="term"><pre><code>curl -sv &quot;http://127.0.0.1:8000/expenses?limit=1&quot; -o /dev/null</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out"><summary>Output<span class="st st2">200 OK</span><span class="lines">17 lines</span></summary><pre>*   Trying 127.0.0.1:8000...
+* Connected to 127.0.0.1 (127.0.0.1) port 8000
+&gt; GET /expenses?limit=1 HTTP/1.1
+&gt; Host: 127.0.0.1:8000
+&gt; User-Agent: curl/8.5.0
+&gt; Accept: */*
+&gt; 
+&lt; HTTP/1.1 200 OK
+&lt; date: Fri, 09 Oct 2026 11:38:19 GMT
+&lt; server: uvicorn
+&lt; content-length: 165
+&lt; content-type: application/json
+&lt; x-request-id: 10b77297
+&lt; x-response-time-ms: 1.0
+&lt; 
+{ [165 bytes data]
+* Connection #0 to host 127.0.0.1 left intact</pre></details>
+</article>
+<article class="cmd" id="headers-choose-your-own-request-id" data-text="headers, timing and cors choose your own request id look for [demo1234] in terminal 1. curl -s -i -h &quot;x-request-id: demo1234&quot; &quot;http://127.0.0.1:8000/expenses?limit=1&quot; | grep -i &quot;x-request-id&quot;">
+  <h3><a href="#headers-choose-your-own-request-id">Choose your own request id</a></h3>
+  <p class="desc">Look for [demo1234] in Terminal 1.</p>
+  <div class="term"><pre><code>curl -s -i -H &quot;X-Request-ID: demo1234&quot; &quot;http://127.0.0.1:8000/expenses?limit=1&quot; | grep -i &quot;x-request-id&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">1 line</span></summary><pre>x-request-id: demo1234</pre></details>
+</article>
+<article class="cmd" id="headers-time-a-request" data-text="headers, timing and cors time a request  curl -s -o /dev/null -w &quot;status %{http_code} in %{time_total}s\n&quot; &quot;http://127.0.0.1:8000/expenses/summary?by=category&quot;">
+  <h3><a href="#headers-time-a-request">Time a request</a></h3>
+  
+  <div class="term"><pre><code>curl -s -o /dev/null -w &quot;status %{http_code} in %{time_total}s\n&quot; &quot;http://127.0.0.1:8000/expenses/summary?by=category&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">1 line</span></summary><pre>status 200 in 0.001714s</pre></details>
+</article>
+<article class="cmd" id="headers-a-browser-call-from-the-front-end-is-allowed" data-text="headers, timing and cors a browser call from the front-end is allowed the origin header is what a browser adds. the api answers with access-control-allow-origin. curl -s -i -h &quot;origin: http://127.0.0.1:5500&quot; &quot;http://127.0.0.1:8000/expenses?limit=1&quot; | grep -i &quot;access-control&quot;">
+  <h3><a href="#headers-a-browser-call-from-the-front-end-is-allowed">A browser call from the front-end is allowed</a></h3>
+  <p class="desc">The Origin header is what a browser adds. The API answers with Access-Control-Allow-Origin.</p>
+  <div class="term"><pre><code>curl -s -i -H &quot;Origin: http://127.0.0.1:5500&quot; &quot;http://127.0.0.1:8000/expenses?limit=1&quot; | grep -i &quot;access-control&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">2 lines</span></summary><pre>access-control-expose-headers: X-Request-ID, X-Response-Time-ms
+access-control-allow-origin: http://127.0.0.1:5500</pre></details>
+</article>
+<article class="cmd" id="headers-a-call-from-any-other-site-is-not" data-text="headers, timing and cors a call from any other site is not  curl -s -i -h &quot;origin: http://evil.example&quot; &quot;http://127.0.0.1:8000/expenses?limit=1&quot; | grep -i &quot;access-control-allow-origin&quot; || echo &quot;no cors headers, so a browser on that site would block the response&quot;">
+  <h3><a href="#headers-a-call-from-any-other-site-is-not">A call from any other site is not</a></h3>
+  
+  <div class="term"><pre><code>curl -s -i -H &quot;Origin: http://evil.example&quot; &quot;http://127.0.0.1:8000/expenses?limit=1&quot; | grep -i &quot;access-control-allow-origin&quot; || echo &quot;No CORS headers, so a browser on that site would block the response&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">1 line</span></summary><pre>No CORS headers, so a browser on that site would block the response</pre></details>
+</article>
+<article class="cmd" id="headers-the-preflight-a-browser-sends-before-a-post" data-text="headers, timing and cors the preflight a browser sends before a post  curl -s -i -x options &quot;http://127.0.0.1:8000/expenses&quot; -h &quot;origin: http://127.0.0.1:5500&quot; -h &quot;access-control-request-method: post&quot; -h &quot;access-control-request-headers: content-type,x-request-id&quot;">
+  <h3><a href="#headers-the-preflight-a-browser-sends-before-a-post">The preflight a browser sends before a POST</a></h3>
+  
+  <div class="term"><pre><code>curl -s -i -X OPTIONS &quot;http://127.0.0.1:8000/expenses&quot; -H &quot;Origin: http://127.0.0.1:5500&quot; -H &quot;Access-Control-Request-Method: POST&quot; -H &quot;Access-Control-Request-Headers: content-type,x-request-id&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="st st2">200 OK</span><span class="lines">14 lines</span></summary><pre>HTTP/1.1 200 OK
+date: Fri, 09 Oct 2026 11:38:19 GMT
+server: uvicorn
+vary: Origin
+access-control-allow-methods: GET, POST, PUT, DELETE
+access-control-max-age: 600
+access-control-allow-headers: Accept, Accept-Language, Content-Language, Content-Type, X-Request-ID
+access-control-allow-origin: http://127.0.0.1:5500
+content-length: 2
+content-type: text/plain; charset=utf-8
+x-request-id: e9331ec0
+x-response-time-ms: 0.2
+
+OK</pre></details>
+</article>
+<article class="cmd" id="headers-export-every-expense-to-a-csv-file" data-text="headers, timing and cors export every expense to a csv file  curl -s &quot;http://127.0.0.1:8000/expenses?limit=500&quot; | python3 -c &#x27;import sys, json, csv; rows = json.load(sys.stdin); w = csv.dictwriter(sys.stdout, [&quot;id&quot;, &quot;spent_on&quot;, &quot;title&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;note&quot;], extrasaction=&quot;ignore&quot;); w.writeheader(); w.writerows(rows)&#x27; &gt; expenses.csv &amp;&amp; head -5 expenses.csv">
+  <h3><a href="#headers-export-every-expense-to-a-csv-file">Export every expense to a CSV file</a></h3>
+  
+  <div class="term"><pre><code>curl -s &quot;http://127.0.0.1:8000/expenses?limit=500&quot; | python3 -c &#x27;import sys, json, csv; rows = json.load(sys.stdin); w = csv.DictWriter(sys.stdout, [&quot;id&quot;, &quot;spent_on&quot;, &quot;title&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;note&quot;], extrasaction=&quot;ignore&quot;); w.writeheader(); w.writerows(rows)&#x27; &gt; expenses.csv &amp;&amp; head -5 expenses.csv</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">5 lines</span></summary><pre>id,spent_on,title,category,amount,note
+3,2026-10-07,Coffee,food,4.75,
+1,2026-10-05,Groceries,food,42.5,
+8,2026-10-03,Lunch,food,12.5,
+7,2026-10-02,Lunch,food,12.5,</pre></details>
+</article>
+</section><section class="sec" id="database" data-sec>
+<div class="sec-head"><h2>Look inside the database</h2></div>
+<p class="intro">The API stores everything in one SQLite file, data/expenses.db. scripts/sql.py runs any query and prints a table. macOS also ships the sqlite3 tool, shown last.</p>
+<article class="cmd" id="database-tables-in-the-database" data-text="look inside the database tables in the database  python3 scripts/sql.py --tables">
+  <h3><a href="#database-tables-in-the-database">Tables in the database</a></h3>
+  
+  <div class="term"><pre><code>python3 scripts/sql.py --tables</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">1 line</span></summary><pre>expenses</pre></details>
+</article>
+<article class="cmd" id="database-how-the-expenses-table-is-defined" data-text="look inside the database how the expenses table is defined  python3 scripts/sql.py --schema">
+  <h3><a href="#database-how-the-expenses-table-is-defined">How the expenses table is defined</a></h3>
+  
+  <div class="term"><pre><code>python3 scripts/sql.py --schema</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">12 lines</span></summary><pre>CREATE TABLE expenses (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    title        TEXT    NOT NULL,
+    amount_cents INTEGER NOT NULL CHECK (amount_cents &gt; 0),
+    category     TEXT    NOT NULL,
+    spent_on     TEXT    NOT NULL,          -- ISO date, YYYY-MM-DD
+    note         TEXT,
+    created_at   TEXT    NOT NULL DEFAULT (datetime(&#x27;now&#x27;)),
+    updated_at   TEXT    NOT NULL DEFAULT (datetime(&#x27;now&#x27;))
+);
+CREATE INDEX idx_expenses_spent_on ON expenses (spent_on);
+CREATE INDEX idx_expenses_category ON expenses (category);</pre></details>
+</article>
+<article class="cmd" id="database-latest-rows-exactly-as-stored" data-text="look inside the database latest rows exactly as stored money is in amount_cents, a whole number. python3 scripts/sql.py &quot;select id, spent_on, title, category, amount_cents from expenses order by id desc limit 5&quot;">
+  <h3><a href="#database-latest-rows-exactly-as-stored">Latest rows exactly as stored</a></h3>
+  <p class="desc">Money is in amount_cents, a whole number.</p>
+  <div class="term"><pre><code>python3 scripts/sql.py &quot;SELECT id, spent_on, title, category, amount_cents FROM expenses ORDER BY id DESC LIMIT 5&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">8 lines</span></summary><pre>id  spent_on    title       category   amount_cents
+--  ----------  ----------  ---------  ------------
+ 9  2026-09-01  Phone bill  utilities          3500
+ 8  2026-10-03  Lunch       food               1250
+ 7  2026-10-02  Lunch       food               1250
+ 6  2026-10-01  Lunch       food               1250
+ 4  2026-09-15  Notebook    education          1999
+(5 rows)</pre></details>
+</article>
+<article class="cmd" id="database-the-monthly-summary-query" data-text="look inside the database the monthly summary query  python3 scripts/sql.py &quot;select strftime(&#x27;%y-%m&#x27;, spent_on) as month, count(*) as n, sum(amount_cents) / 100.0 as total from expenses group by month order by month&quot;">
+  <h3><a href="#database-the-monthly-summary-query">The monthly summary query</a></h3>
+  
+  <div class="term"><pre><code>python3 scripts/sql.py &quot;SELECT strftime(&#x27;%Y-%m&#x27;, spent_on) AS month, COUNT(*) AS n, SUM(amount_cents) / 100.0 AS total FROM expenses GROUP BY month ORDER BY month&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">5 lines</span></summary><pre>month    n  total
+-------  -  -----
+2026-09  3  88.99
+2026-10  5  84.75
+(2 rows)</pre></details>
+</article>
+<article class="cmd" id="database-the-category-summary-query" data-text="look inside the database the category summary query  python3 scripts/sql.py &quot;select category, count(*) as n, sum(amount_cents) / 100.0 as total, round(avg(amount_cents) / 100.0, 2) as average from expenses group by category order by total desc&quot;">
+  <h3><a href="#database-the-category-summary-query">The category summary query</a></h3>
+  
+  <div class="term"><pre><code>python3 scripts/sql.py &quot;SELECT category, COUNT(*) AS n, SUM(amount_cents) / 100.0 AS total, ROUND(AVG(amount_cents) / 100.0, 2) AS average FROM expenses GROUP BY category ORDER BY total DESC&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Output<span class="lines">7 lines</span></summary><pre>category   n  total  average
+---------  -  -----  -------
+food       5  84.75    16.95
+utilities  1   35.0     35.0
+transport  1   34.0     34.0
+education  1  19.99    19.99
+(4 rows)</pre></details>
+</article>
+<article class="cmd" id="database-same-thing-with-the-sqlite3-tool" data-text="look inside the database same thing with the sqlite3 tool  sqlite3 -header -column data/expenses.db &quot;select category, count(*) as n, sum(amount_cents)/100.0 as total from expenses group by category order by total desc;&quot;">
+  <h3><a href="#database-same-thing-with-the-sqlite3-tool">Same thing with the sqlite3 tool</a></h3>
+  
+  <div class="term"><pre><code>sqlite3 -header -column data/expenses.db &quot;SELECT category, COUNT(*) AS n, SUM(amount_cents)/100.0 AS total FROM expenses GROUP BY category ORDER BY total DESC;&quot;</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  
+</article>
+</section><section class="sec" id="frontend" data-sec>
+<div class="sec-head"><h2>Front-end and housekeeping</h2></div>
+<article class="cmd" id="frontend-serve-the-front-end-terminal-2" data-text="front-end and housekeeping serve the front-end (terminal 2) keep the api running in terminal 1. use a third terminal for curl. python3 -m http.server 5500 --directory frontend">
+  <h3><a href="#frontend-serve-the-front-end-terminal-2">Serve the front-end (Terminal 2)</a></h3>
+  <p class="desc">Keep the API running in Terminal 1. Use a third terminal for curl.</p>
+  <div class="term"><pre><code>python3 -m http.server 5500 --directory frontend</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Prints, then keeps running until Ctrl+C<span class="lines">1 line</span></summary><pre>Serving HTTP on :: port 5500 (http://[::]:5500/) ...</pre></details>
+</article>
+<article class="cmd" id="frontend-open-the-front-end" data-text="front-end and housekeeping open the front-end  open http://127.0.0.1:5500">
+  <h3><a href="#frontend-open-the-front-end">Open the front-end</a></h3>
+  
+  <div class="term"><pre><code>open http://127.0.0.1:5500</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  
+</article>
+<article class="cmd" id="frontend-allow-another-front-end-address" data-text="front-end and housekeeping allow another front-end address only these origins may call the api from a browser. expenses_cors_origins=&quot;http://127.0.0.1:5500,http://localhost:3000&quot; uvicorn app.main:app --reload">
+  <h3><a href="#frontend-allow-another-front-end-address">Allow another front-end address</a></h3>
+  <p class="desc">Only these origins may call the API from a browser.</p>
+  <div class="term"><pre><code>EXPENSES_CORS_ORIGINS=&quot;http://127.0.0.1:5500,http://localhost:3000&quot; uvicorn app.main:app --reload</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  
+</article>
+<article class="cmd" id="frontend-run-the-whole-tour-in-one-go" data-text="front-end and housekeeping run the whole tour in one go runs the main commands from this page in order, with headings. bash scripts/demo.sh">
+  <h3><a href="#frontend-run-the-whole-tour-in-one-go">Run the whole tour in one go</a></h3>
+  <p class="desc">Runs the main commands from this page in order, with headings.</p>
+  <div class="term"><pre><code>bash scripts/demo.sh</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  <details class="out" open><summary>Prints<span class="lines">1 line</span></summary><pre>(prints each step and its response)</pre></details>
+</article>
+<article class="cmd" id="frontend-something-already-using-port-8000" data-text="front-end and housekeeping something already using port 8000?  lsof -i :8000">
+  <h3><a href="#frontend-something-already-using-port-8000">Something already using port 8000?</a></h3>
+  
+  <div class="term"><pre><code>lsof -i :8000</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  
+</article>
+<article class="cmd" id="frontend-stop-whatever-is-on-port-8000" data-text="front-end and housekeeping stop whatever is on port 8000  kill $(lsof -ti :8000)">
+  <h3><a href="#frontend-stop-whatever-is-on-port-8000">Stop whatever is on port 8000</a></h3>
+  
+  <div class="term"><pre><code>kill $(lsof -ti :8000)</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  
+</article>
+<article class="cmd" id="frontend-start-over-with-fresh-sample-data" data-text="front-end and housekeeping start over with fresh sample data stop the server first. on a mac, rm deletes without using the trash. rm data/expenses.db &amp;&amp; python -m scripts.seed">
+  <h3><a href="#frontend-start-over-with-fresh-sample-data">Start over with fresh sample data</a></h3>
+  <p class="desc">Stop the server first. On a Mac, rm deletes without using the Trash.</p>
+  <div class="term"><pre><code>rm data/expenses.db &amp;&amp; python -m scripts.seed</code></pre><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+  
+</article>
+<article class="cmd log" id="frontend-terminal-log" data-text="terminal log front-end browser preflight request id">
+  <h3><a href="#frontend-terminal-log">What Terminal 1 printed while the front-end was used</a></h3>
+  <p class="desc">Recorded during a real session: the page connects, loads the list and totals, gets two validation errors, adds “Flight home”, edits it, then deletes it.
+  Each GET, POST, PUT and DELETE id matches the id shown in the front-end's Network traffic panel. OPTIONS lines are the browser's preflight checks; the page never sees them.</p>
+  <details class="out" open><summary>Terminal 1<span class="lines">19 lines</span></summary><pre>[6016bb44] OPTIONS / 200 0.3ms  CORS preflight from http://127.0.0.1:5500
+[8e07830c] GET    / 200 1.1ms  from http://127.0.0.1:5500
+[964066bc] OPTIONS /expenses?limit=10&amp;offset=0 200 3.2ms  CORS preflight from http://127.0.0.1:5500
+[a89a3422] OPTIONS /expenses/summary?by=month 200 0.8ms  CORS preflight from http://127.0.0.1:5500
+[fdb18e0b] GET    /expenses/summary?by=month 200 3.9ms  from http://127.0.0.1:5500
+[3d26bd13] GET    /expenses?limit=10&amp;offset=0 200 4.7ms  from http://127.0.0.1:5500
+[552390be] OPTIONS /expenses 200 0.2ms  CORS preflight from http://127.0.0.1:5500
+[8bf78f82] POST   /expenses {&quot;title&quot;:&quot;&quot;,&quot;amount&quot;:null,&quot;category&quot;:&quot;&quot;,&quot;spent_on&quot;:&quot;2026-10-09&quot;,&quot;note&quot;:null} 422 0.9ms  from http://127.0.0.1:5500
+[010e78b1] POST   /expenses {&quot;title&quot;:&quot;Flight home&quot;,&quot;amount&quot;:320,&quot;category&quot;:&quot;travel&quot;,&quot;spent_on&quot;:&quot;2030-01-01&quot;,&quot;note&quot;:null} 422 2.5ms  from http://127.0.0.1:5500
+[f46e571e] POST   /expenses {&quot;title&quot;:&quot;Flight home&quot;,&quot;amount&quot;:320,&quot;category&quot;:&quot;travel&quot;,&quot;spent_on&quot;:&quot;2026-10-09&quot;,&quot;note&quot;:&quot;Booked from the UI&quot;} 201 6.7ms  from http://127.0.0.1:5500
+[edb754c6] GET    /expenses?limit=10&amp;offset=0 200 3.4ms  from http://127.0.0.1:5500
+[77769dad] GET    /expenses/summary?by=month 200 9.9ms  from http://127.0.0.1:5500
+[917aef3f] OPTIONS /expenses/10 200 0.2ms  CORS preflight from http://127.0.0.1:5500
+[c8506aee] PUT    /expenses/10 {&quot;title&quot;:&quot;Flight home&quot;,&quot;amount&quot;:289.4,&quot;category&quot;:&quot;travel&quot;,&quot;spent_on&quot;:&quot;2026-10-09&quot;,&quot;note&quot;:&quot;Booked from the UI&quot;} 200 10.8ms  from http://127.0.0.1:5500
+[b1b17d8f] GET    /expenses?limit=10&amp;offset=0 200 3.3ms  from http://127.0.0.1:5500
+[961632f5] GET    /expenses/summary?by=month 200 3.3ms  from http://127.0.0.1:5500
+[1e33ad87] DELETE /expenses/10 204 5.3ms  from http://127.0.0.1:5500
+[066193a0] GET    /expenses?limit=10&amp;offset=0 200 2.9ms  from http://127.0.0.1:5500
+[9f2cab0c] GET    /expenses/summary?by=month 200 2.3ms  from http://127.0.0.1:5500</pre></details>
+</article>
+</section>
+      <p class="none" id="none" hidden>No command matches that search.</p>
+      <p class="foot">Outputs were captured with FastAPI 0.143 and uvicorn 0.54, the versions in this project's virtual environment.
+      Header order, the date line and the curl version in the verbose example may look slightly different on your Mac.</p>
+    </main>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll(".copy").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    var code = btn.parentElement.querySelector("code");
+    var text = code.textContent;
+    function done(label) { btn.textContent = label; setTimeout(function () { btn.textContent = "Copy"; }, 1500); }
+    function selectIt() {
+      var r = document.createRange(); r.selectNodeContents(code);
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); done("Press ⌘C");
+    }
+    try {
+      navigator.clipboard.writeText(text).then(function () { done("Copied"); }, selectIt);
+    } catch (err) { selectIt(); }
+  });
+});
+var find = document.getElementById("find");
+find.addEventListener("input", function () {
+  var q = find.value.trim().toLowerCase(), any = false;
+  document.querySelectorAll("[data-sec]").forEach(function (sec) {
+    var shown = 0;
+    sec.querySelectorAll(".cmd").forEach(function (c) {
+      var hit = !q || c.dataset.text.indexOf(q) !== -1;
+      c.hidden = !hit; if (hit) shown++;
+    });
+    sec.hidden = shown === 0; if (shown) any = true;
+  });
+  document.getElementById("none").hidden = any;
+});
+</script>
+
+</body>
+</html>

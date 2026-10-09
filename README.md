@@ -12,6 +12,9 @@ computed with SQL.
 - Money stored as integer cents, so `19.99` never turns into `19.989999…`
 - Input validation (Pydantic + business rules) with clear `422` / `404` errors
 - Interactive docs generated automatically at `/docs`
+- A separate browser front-end (`frontend/`) that calls the API over HTTP, with a live panel showing every request and response
+- CORS configured so only the front-end's origin may call the API from a browser
+- A request log: every call gets an id that appears in both the browser and the server terminal
 - Tested two ways: a **pytest** suite and a **Postman** collection with test scripts
 
 ## Project structure
@@ -21,6 +24,7 @@ expense-tracker-api/
 ├── app/
 │   ├── main.py         # API layer: FastAPI routes, error → HTTP status mapping
 │   ├── schemas.py      # Pydantic request/response models
+│   ├── middleware.py   # CORS + request log (request id, timing)
 │   ├── service.py      # ExpenseService: validation and business rules
 │   ├── repository.py   # ExpenseRepository: every SQL query lives here
 │   ├── database.py     # Database: connection handling and schema
@@ -30,7 +34,12 @@ expense-tracker-api/
 │   └── test_api.py     # end-to-end tests of all 6 endpoints
 ├── postman/
 │   └── expense-tracker.postman_collection.json
-├── scripts/seed.py     # loads ~3 months of sample data
+├── frontend/           # separate web UI: index.html, app.js, styles.css (no build step)
+├── docs/commands.html  # every terminal command with real recorded output
+├── scripts/
+│   ├── seed.py         # loads ~3 months of sample data
+│   ├── demo.sh         # runs a guided tour of the API with curl
+│   └── sql.py          # prints any SQL query against the database as a table
 └── requirements.txt
 ```
 
@@ -50,6 +59,41 @@ uvicorn app.main:app --reload
 
 Open **http://127.0.0.1:8000/docs** to try every endpoint in the browser.
 The database file is created at `data/expenses.db` (override with the `EXPENSES_DB` environment variable).
+
+## Front-end
+
+A separate web page in `frontend/` talks to the API the way any client would: over HTTP, from a different origin.
+
+```bash
+# Terminal 1: the API
+uvicorn app.main:app --reload
+
+# Terminal 2: the front-end
+python3 -m http.server 5500 --directory frontend
+```
+
+Open **http://127.0.0.1:5500**. You can add, edit, delete and filter expenses and switch the spending
+summary between months and categories. The **Network traffic** panel lists every request the page sends,
+with the full request, the response, and the equivalent `curl` command.
+
+Each request carries an `X-Request-ID` header. The API echoes it back and prints it in Terminal 1,
+so you can match a row in the browser to the line the server logged:
+
+```
+INFO:     [f46e571e] POST   /expenses {"title":"Flight home","amount":320,...} 201 6.7ms  from http://127.0.0.1:5500
+```
+
+Browsers only let a page read responses from another origin if the API allows it (CORS). The API allows
+`http://127.0.0.1:5500` and `http://localhost:5500`; change this with `EXPENSES_CORS_ORIGINS`.
+
+## Trying it from the terminal
+
+`docs/commands.html` lists 79 commands (curl, SQL, setup) with the real output each one produced.
+Open it in a browser, or run the main ones in order:
+
+```bash
+bash scripts/demo.sh
+```
 
 ## Endpoints
 
@@ -131,3 +175,4 @@ storing the new id in a variable and checking status codes and response bodies.
 - Budgets per category with over-budget alerts
 - CSV export of filtered expenses
 - Docker image and a hosted deployment
+- Deploy the front-end and API together behind one domain

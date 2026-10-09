@@ -112,3 +112,41 @@ def test_summaries(client):
     assert [(r["group"], r["count"]) for r in by_cat["rows"]] == [("rent", 1), ("food", 1)]
 
     assert client.get("/expenses/summary", params={"by": "week"}).status_code == 422
+
+
+# ---------- cross-origin calls from the browser front-end ----------
+
+FRONTEND = "http://127.0.0.1:5500"
+
+
+def test_request_id_is_returned_and_reused(client):
+    r = client.get("/expenses", headers={"X-Request-ID": "abc12345"})
+    assert r.headers["x-request-id"] == "abc12345"
+    assert float(r.headers["x-response-time-ms"]) >= 0
+    assert len(client.get("/expenses").headers["x-request-id"]) == 8  # generated
+
+
+def test_cors_allows_frontend_origin(client):
+    r = client.get("/expenses", headers={"Origin": FRONTEND})
+    assert r.headers["access-control-allow-origin"] == FRONTEND
+    assert "X-Request-ID" in r.headers["access-control-expose-headers"]
+
+
+def test_cors_preflight(client):
+    r = client.options("/expenses", headers={
+        "Origin": FRONTEND,
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "content-type,x-request-id",
+    })
+    assert r.status_code == 200
+    assert "POST" in r.headers["access-control-allow-methods"]
+
+
+def test_cors_rejects_unknown_origin(client):
+    r = client.get("/expenses", headers={"Origin": "http://evil.example"})
+    assert "access-control-allow-origin" not in r.headers
+
+
+def test_body_still_reaches_route_after_logging(client):
+    r = new_expense(client, title="Logged body")
+    assert r.status_code == 201 and r.json()["title"] == "Logged body"

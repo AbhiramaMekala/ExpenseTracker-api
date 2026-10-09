@@ -8,6 +8,9 @@ GET    /expenses/summary         monthly or category-wise totals
 GET    /expenses/{id}            view one expense
 PUT    /expenses/{id}            update an expense
 DELETE /expenses/{id}            delete an expense
+
+A separate browser front-end lives in frontend/ and talks to these endpoints
+over HTTP; see app/middleware.py for how cross-origin calls are allowed and logged.
 """
 
 import os
@@ -16,6 +19,7 @@ from typing import Literal
 from fastapi import Depends, FastAPI, Query, Request, status
 from fastapi.responses import JSONResponse, Response
 
+from . import middleware
 from .database import Database
 from .repository import ExpenseRepository
 from .schemas import ExpenseIn, ExpenseOut, SummaryOut, SummaryResponse
@@ -35,6 +39,7 @@ def create_app(db_path: str = DEFAULT_DB_PATH) -> FastAPI:
         description="Track personal expenses and see monthly and category-wise summaries.",
     )
     app.state.service = ExpenseService(ExpenseRepository(db))
+    middleware.install(app)  # CORS for the browser front-end + request log
 
     # ----- map domain errors to HTTP responses -----
 
